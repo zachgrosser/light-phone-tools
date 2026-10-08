@@ -9,6 +9,22 @@ This repo started as a copy of [lightphone/light-sdk](https://github.com/lightph
 - **New collaborator?** Read [COLLABORATING.md](../COLLABORATING.md) first.
 - **Light's rules for tools:** [TOOL_GUIDELINES.md](../TOOL_GUIDELINES.md)
 
+## Our tools
+
+### Wiki
+Search and read Wikipedia on the Light Phone. Articles are shown as plain text with tappable links, one section at a time, and can be starred to read offline. A start-up screen credits Wikipedia and its CC BY-SA 4.0 license, and every article ends with a link back to its source.
+
+The code is in [`tool/src/main/kotlin/com/zachgrosser/wiki/`](../tool/src/main/kotlin/com/zachgrosser/wiki/):
+
+| File | What it does |
+|---|---|
+| `HomeScreen.kt` | Start-up credits screen, search box, saved articles, About |
+| `SearchScreen.kt` | Keyboard and search results |
+| `ArticleScreen.kt` / `SectionScreen.kt` | Reading an article, and saving it |
+| `WikiApi.kt` | Talks to Wikipedia |
+| `ArticleParser.kt` | Turns Wikipedia's HTML into plain text, links and sections |
+| `SavedArticles.kt` | Stores saved articles on the phone |
+
 ## Who's working on this
 
 - [@zachgrosser](https://github.com/zachgrosser)
@@ -58,7 +74,7 @@ Since we only edit `tool/`, these merges should almost never clash.
 
 ## Before we share a tool
 
-- [ ] Change `id` in `tool/lighttool.toml` from the placeholder `com.thelightphone.app` to our own, such as `com.zachgrosser.<toolname>`. It can't change once the tool is published.
-- [ ] Set a real `label` (the name shown on the phone).
+- [ ] Double-check `id` in `tool/lighttool.toml` (Wiki uses `com.zachgrosser.wiki`). It can't change once the tool is published.
+- [ ] Switch `serverPackage` in `tool/lighttool.toml` to `com.lightos` when testing on a real Light Phone III.
 - [ ] Check it against [TOOL_GUIDELINES.md](../TOOL_GUIDELINES.md): it should be intentional to use, with no tracking, no ads and no infinite feeds.
 - [ ] **Make the repo public.** Light only signs tools it can build from a public git commit, so we keep this repo private while we build and open it up when we're ready.
