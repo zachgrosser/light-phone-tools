@@ -1,64 +1,53 @@
 # light-phone-tools
 
-Our tools (apps) for the **Light Phone III**, built on Light's official SDK.
+Tools for the **Light Phone III**, built on [Light's official SDK](https://github.com/lightphone/light-sdk).
 
-This repo started as a copy of [lightphone/light-sdk](https://github.com/lightphone/light-sdk). **Our code lives in `tool/`.** Everything else comes from Light and gets updated from their repo. Light's own README is at [`/README.md`](../README.md). Read it once, because it explains how the SDK works.
+## Wiki
 
-> GitHub shows this file (`.github/README.md`) as the repo's front page instead of Light's README. Keeping ours here means updates from Light never clash with it.
+Search and read Wikipedia on the Light Phone. Articles appear as clean text, one section at a time, with tappable links between them. Star an article to read it offline.
 
-- **New collaborator?** Read [COLLABORATING.md](../COLLABORATING.md) first.
-- **Light's rules for tools:** [TOOL_GUIDELINES.md](../TOOL_GUIDELINES.md)
+- A start-up screen credits Wikipedia and its CC BY-SA 4.0 license, and every article ends with its source, license and what was changed.
+- No ads, analytics or tracking. Saved articles stay on the phone.
+- Works on the Light Phone III's screen and adapts to smaller ones like the Light Flip's.
+
+How it works, and why its attribution reads the way it does: [`tool/README.md`](../tool/README.md).
+
+## Where to start
+
+| I want to… | Read |
+|---|---|
+| Set up my computer, run Wiki on the emulator, run the tests | [DEVELOPING.md](../DEVELOPING.md) |
+| Work on this with others (branches, pull requests, reviews) | [COLLABORATING.md](../COLLABORATING.md) |
+| Send Wiki to Light for their Tool Library | [SUBMITTING.md](../SUBMITTING.md) |
+| Know what Light accepts | Light's [TOOL_GUIDELINES.md](../TOOL_GUIDELINES.md) |
+| Understand the SDK itself | Light's [README](../README.md) and [docs](../docs) |
+
+## What's in this repo
+
+This repo is a copy of Light's SDK with our tool added. **Our code lives in `tool/`**; everything else comes from Light and is updated from their repo.
+
+| Folder / file | What it is | Do we edit it? |
+|---|---|---|
+| `tool/` | **Wiki**: its code, tests, settings (`lighttool.toml`) and license | ✅ Yes |
+| `scripts/emulator.sh` | Sets up and runs Light's emulator on a Mac | ✅ Yes |
+| `.github/` | This page, our build workflow, pull request and issue templates | ✅ Yes |
+| `DEVELOPING.md`, `COLLABORATING.md`, `SUBMITTING.md` | Our guides | ✅ Yes |
+| `CLAUDE.md` | Notes Claude Code reads at the start of every session (also a good summary for people) | ✅ Yes |
+| `examples/` | Light's sample tools (weather, authenticator, …) | 👀 Read for ideas |
+| `docs/`, `README.md`, `TOOL_GUIDELINES.md`, `CONTRIBUTING.md` | Light's documentation | 👀 Read |
+| `sdk/`, `plugin/`, `lint-rules/`, `builder/`, `signer/`, … | The SDK itself | ❌ No, it comes from Light |
+
+> GitHub shows this file (`.github/README.md`) as the front page instead of Light's README, so updates from Light never clash with it.
+
+## Licenses
+
+- Wiki's code (`tool/`): [MIT](../tool/LICENSE).
+- Light's SDK (everything else): [MIT](../LICENSE), © The Light Phone.
+- Wikipedia article text shown by Wiki: [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), by Wikipedia's contributors.
+
+Wikipedia is a trademark of the Wikimedia Foundation. This project is not endorsed by or affiliated with the Wikimedia Foundation or with Light.
 
 ## Who's working on this
 
 - [@zachgrosser](https://github.com/zachgrosser)
 - *(add your name here in your first pull request)*
-
-## Getting set up
-
-1. Install [Android Studio](https://developer.android.com/studio), [git](https://git-scm.com/downloads) and, optionally, the [GitHub CLI](https://cli.github.com/) (`gh`).
-2. Download a copy of this repo to your computer:
-   ```bash
-   gh repo clone zachgrosser/light-phone-tools
-   # or, without gh:
-   git clone https://github.com/zachgrosser/light-phone-tools.git
-   ```
-3. Open the `light-phone-tools` folder in Android Studio and let Gradle finish syncing.
-4. Create a phone emulator shaped like the Light Phone III:
-   - 1080 × 1240, 3.92" screen
-   - Android API 34
-   - **No** Google Play Services
-5. For the most realistic testing, run Light's emulator app as a system app. The steps are in [docs/system_app](../docs/system_app).
-6. Start editing `tool/src/main/kotlin/com/thelightphone/sample/HomeScreen.kt`.
-
-## What's where
-
-| Folder / file | What it is | Do we edit it? |
-|---|---|---|
-| `tool/` | **Our tool's code** | ✅ Yes |
-| `tool/lighttool.toml` | Our tool's name, id, version and permissions | ✅ Yes |
-| `examples/` | Light's sample tools (weather, authenticator, audio, UI demo) | 👀 Read for ideas |
-| `docs/` | Light's documentation | 👀 Read |
-| `sdk/`, `plugin/`, `lint-rules/`, `builder/`, `signer/` | The SDK itself | ❌ No, it comes from Light |
-
-## Getting Light's latest SDK changes
-
-Light says the SDK is changing fast, so pull their updates often:
-
-```bash
-git remote add upstream https://github.com/lightphone/light-sdk.git   # first time only, per computer
-git checkout main
-git pull                      # get the latest changes from our repo
-git fetch upstream            # download Light's latest
-git merge upstream/main       # mix it into ours
-git push                      # share the result with the team
-```
-
-Since we only edit `tool/`, these merges should almost never clash.
-
-## Before we share a tool
-
-- [ ] Change `id` in `tool/lighttool.toml` from the placeholder `com.thelightphone.app` to our own, such as `com.zachgrosser.<toolname>`. It can't change once the tool is published.
-- [ ] Set a real `label` (the name shown on the phone).
-- [ ] Check it against [TOOL_GUIDELINES.md](../TOOL_GUIDELINES.md): it should be intentional to use, with no tracking, no ads and no infinite feeds.
-- [ ] **Make the repo public.** Light only signs tools it can build from a public git commit, so we keep this repo private while we build and open it up when we're ready.

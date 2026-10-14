@@ -30,7 +30,7 @@ As a collaborator on a personal repo, your friend can read the code, push change
    cd light-phone-tools
    git remote add upstream https://github.com/lightphone/light-sdk.git
    ```
-5. Open the folder in Android Studio. The [README](.github/README.md) has the emulator setup.
+5. Open the folder in Android Studio and follow [DEVELOPING.md](DEVELOPING.md) to install Java 17 and set up the emulator.
 
 > Prefer clicking to typing? [GitHub Desktop](https://desktop.github.com/) does everything below with buttons, and so does Android Studio's **Git** menu. The ideas are the same.
 
@@ -72,7 +72,9 @@ Commit little and often. Each commit is a checkpoint you can go back to.
 gh pr create --fill
 ```
 
-Or open the repo on GitHub and click the yellow **Compare & pull request** banner. The repo automatically runs Light's build check on every pull request, and you'll see a ✅ or ❌ on it.
+Or open the repo on GitHub and click the yellow **Compare & pull request** banner. Fill in the short checklist it shows. GitHub then runs our **Tool** check (tests and builds) and Light's **PR Check**, and you'll see a ✅ or ❌ on each; [DEVELOPING.md §4](DEVELOPING.md#4-what-github-checks) explains them.
+
+Before opening one, run the tests (`./gradlew :tool:testDebugUnitTest -DlightSdk.toolOnly=true`) and look at your screens in `WikiPreviews.kt` at both sizes.
 
 ### Review your partner's pull request
 
@@ -90,6 +92,8 @@ Once it's approved and the check is green, click **Squash and merge** on GitHub,
 gh pr merge --squash --delete-branch
 ```
 
+**Exception: a pull request that brings in Light's SDK** (like `sdk-update`, below) must use **Create a merge commit** instead (the arrow next to the green button). Squashing it hides Light's history from git, and the next SDK update then clashes with every file Light changed.
+
 Then everyone runs `git checkout main && git pull` to catch up.
 
 ---
@@ -104,18 +108,15 @@ Then everyone runs `git checkout main && git pull` to catch up.
 
 ## 5. Pulling in Light's SDK updates
 
-Every so often, one of you does this on a branch and opens a pull request like any other change:
+Every so often, one of you merges Light's latest SDK on a branch and opens a pull request like any other change. The commands are in [DEVELOPING.md §6](DEVELOPING.md#6-getting-lights-latest-sdk).
 
-```bash
-git checkout main && git pull
-git checkout -b sdk-update
-git fetch upstream
-git merge upstream/main
-git push -u origin sdk-update
-gh pr create --title "Update to latest Light SDK" --fill
-```
+## 6. Careful areas
 
-## 6. Good to know
+- **`tool/src/main/kotlin/com/zachgrosser/wiki/Attribution.kt`** holds every credit, license, trademark and privacy line. Wikipedia's license and Wikimedia's policies decide that wording; [tool/README.md](tool/README.md#attribution-and-wikipedias-rules) lists the rules and sources. Check them before changing it.
+- **`tool/lighttool.toml`:** the `id` can never change once Wiki is published, and `serverPackage` must stay `com.lightos` (Light's build rejects anything else).
+- **Outside `tool/`:** leave Light's files alone so their updates merge cleanly. Suggestions for the SDK itself go to Light (below).
+
+## 7. Good to know
 
 - **Protecting `main`:** GitHub can block direct pushes to `main` with a setting called *branch protection*. On a free account that only works for **public** repos. While this repo is private, the golden rule above is a team agreement. Once it's public, turn it on under **Settings → Branches**.
 - **Contributing to Light's SDK itself** is a different process: issues and pull requests on [lightphone/light-sdk](https://github.com/lightphone/light-sdk). Read their [CONTRIBUTING.md](CONTRIBUTING.md) first. They ask that issues and PRs be written by a human, and that you can explain any code change in your own words.
