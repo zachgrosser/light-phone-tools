@@ -57,6 +57,12 @@ The code is in [`tool/src/main/kotlin/com/zachgrosser/wiki/`](../tool/src/main/k
 | `docs/` | Light's documentation | 👀 Read |
 | `sdk/`, `plugin/`, `lint-rules/`, `builder/`, `signer/` | The SDK itself | ❌ No, it comes from Light |
 
+## Getting a tool onto a phone
+
+Every push that changes `tool/` triggers the **Build APK** workflow on GitHub. Open the repo's **Actions** tab, pick the latest **Build APK** run, and download the file under **Artifacts**. It's a zip containing the installable `.apk`. You can also start a build by hand with **Run workflow**.
+
+That APK is a test build signed with the SDK's public development key, so a phone only shows it when its **Allowed tools** setting is **All tools**. For a build signed by Light, submit the tool on the [dashboard](https://dashboard.thelightphone.com), which needs a public repo. Light's README covers the steps under "Submitting Your Tool".
+
 ## Getting Light's latest SDK changes
 
 Light says the SDK is changing fast, so pull their updates often:
@@ -75,6 +81,6 @@ Since we only edit `tool/`, these merges should almost never clash.
 ## Before we share a tool
 
 - [ ] Double-check `id` in `tool/lighttool.toml` (Wiki uses `com.zachgrosser.wiki`). It can't change once the tool is published.
-- [ ] Switch `serverPackage` in `tool/lighttool.toml` to `com.lightos` when testing on a real Light Phone III.
+- [ ] Keep `serverPackage` in `tool/lighttool.toml` set to `com.lightos`. Light's build rejects anything else; only switch it while testing on the LightOS emulator.
 - [ ] Check it against [TOOL_GUIDELINES.md](../TOOL_GUIDELINES.md): it should be intentional to use, with no tracking, no ads and no infinite feeds.
 - [ ] **Make the repo public.** Light only signs tools it can build from a public git commit, so we keep this repo private while we build and open it up when we're ready.

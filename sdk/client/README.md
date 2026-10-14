@@ -263,6 +263,34 @@ capture.asFlow().collect { pcm ->
 - A capture startup failure throws `LightAudioCaptureException` from collection.
 - Set `CaptureConfig.source` to `Unprocessed` to request raw input when supported; `Mic` uses the standard processed microphone path.
 
+### Vibration
+
+Use `sealedActivity.vibrator` for touch feedback or vibration waveforms. It holds only the application context, so it can outlive the screen.
+
+```kotlin
+import kotlin.time.Duration.Companion.milliseconds
+
+val vibrator: LightVibrator = sealedActivity.vibrator
+
+vibrator.click() // short touch feedback
+vibrator.vibrate(100.milliseconds) // default intensity
+vibrator.vibrate(100.milliseconds, VibrationAmplitude(128)) // custom intensity
+
+vibrator.vibrate(
+    LightVibrationWaveform(
+        durations = listOf(100.milliseconds, 400.milliseconds, 500.milliseconds),
+        amplitudes = vibrationAmplitudesOf(255, 120, 40),
+    ),
+    usage = LightVibrationUsage.Alarm,
+)
+```
+
+- Segment `i` lasts `durations[i]` at `amplitudes[i]`, where `0` is off and `255` is the motor's maximum.
+- Without motor amplitude control, each segment becomes an on/off pulse whose on-time is proportional to its amplitude.
+- `LightVibrationUsage.Touch` is for direct touch feedback. `LightVibrationUsage.Alarm` is for alarms and timers the user set, and vibrates while the screen is off.
+- `cancel()` stops the current vibration. Devices without a vibrator ignore all calls.
+- The `android.permission.VIBRATE` permission is merged from the SDK; listing it in `lighttool.toml` documents the tool's intent.
+
 ### NFC
 
 `LightNfc` reads NFC tags — and other phones presenting a tag — while your tool is in the foreground.
@@ -316,6 +344,34 @@ val tap = nfc.newReader().awaitTap()
 - A tag with no NDEF message — a bare UID badge — reads successfully with an empty `records` list.
 - Failures arrive from collection as a `LightNfcException`: `LightNfcUnavailableException` when NFC is off, absent, not granted to the tool, or couldn't start; `LightNfcReadException` when the tag left the field or its contents couldn't be decoded. The exception message is product copy naming the actual cause.
 - `LightNfcReaderConfig` narrows the technologies polled, skips the platform's NDEF check, silences the platform tap sound, and sets the presence-check delay.
+
+#### Talking to smart cards (ISO-DEP)
+
+`withIsoDep` waits for a tap from an ISO-DEP card — a payment card, passport, or hardware security key — and hands your block a connected `LightIsoDep` for exchanging raw ISO 7816-4 APDUs. Reader mode stays held until the block returns, then the card is released.
+
+```kotlin
+val reader = nfc.newReader(
+    LightNfcReaderConfig(
+        technologies = setOf(LightNfcTechnology.NfcA, LightNfcTechnology.NfcB),
+        skipNdefCheck = true,
+    ),
+)
+
+val selectAid = byteArrayOf(0x00, 0xA4.toByte(), 0x04, 0x00, aid.size.toByte()) + aid
+
+val selected = reader.withIsoDep { card ->
+    val response = card.transceive(selectAid)
+    response.size >= 2 &&
+        response[response.size - 2] == 0x90.toByte() &&
+        response[response.size - 1] == 0x00.toByte()
+}
+```
+
+- Cards answer over NFC-A or NFC-B; skipping the NDEF check keeps the platform from probing the card before your block runs.
+- `transceive` runs off the main thread and returns the full response, status word included. Checking it is up to you.
+- A tag that isn't ISO-DEP, a card pulled away mid-exchange, or a failed exchange arrives as a `LightNfcReadException` with product copy naming the cause; `LightNfcUnavailableException` covers NFC being off or absent, as with taps.
+- `maxTransceiveLength` is the largest command the card accepts; `timeoutMs` raises the per-command timeout for slow operations such as key generation.
+- Keep the block short and avoid waiting on the user inside it: the card has to stay on the phone the whole time.
 
 #### Tap prompt
 
