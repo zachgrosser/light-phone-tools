@@ -57,6 +57,31 @@ The code is in [`tool/src/main/kotlin/com/zachgrosser/wiki/`](../tool/src/main/k
 | `docs/` | Light's documentation | 👀 Read |
 | `sdk/`, `plugin/`, `lint-rules/`, `builder/`, `signer/` | The SDK itself | ❌ No, it comes from Light |
 
+## Trying a tool on the LightOS emulator (Mac)
+
+Light's emulator shows a tool the way a Light Phone III would, on your computer. Setup takes about an hour the first time, mostly downloads; after that it starts in a minute.
+
+**1. Install Android Studio.** Download it from [developer.android.com/studio](https://developer.android.com/studio) (on an M-series Mac, pick the "Mac with Apple chip" version). Open it and run the setup wizard with the **Standard** options.
+
+**2. Open this repo in Android Studio.** On the welcome screen, choose **Clone Repository**, sign in to GitHub, pick `light-phone-tools` and clone it. When it opens, wait for the progress bar at the bottom ("Gradle sync") to finish. To try a tool that's still in a pull request, switch to its branch: click the branch name at the top of the window, then choose the branch under **Remote**, then **Checkout**.
+
+**3. Create a virtual phone.** Open **Device Manager** (the phone icon on the right edge) and click **+**, then **Create Virtual Device**:
+- Pick any phone, for example **Medium Phone**. The script resizes the screen to the Light Phone III's later.
+- For the system image, set **Services** to **No Google APIs** (not Google Play) and choose **API 34** ("UpsideDownCake"), **arm64-v8a**. Download it if asked.
+- Name it `LightPhone` and click **Finish**. **Don't press its play button**; the script starts it in the mode LightOS needs.
+
+**4. Run the setup script.** Open the **Terminal** tab at the bottom of Android Studio and run:
+
+```bash
+scripts/emulator.sh setup LightPhone
+```
+
+It starts the virtual phone, installs Light's LightOS emulator into it as a system app, then builds and installs our tool. It stops with a plain explanation if something's wrong.
+
+**5. Allow our tool.** In the LightOS emulator on the virtual phone, open **Settings → Allowed Tools** and choose **All Tools**. Our tools then appear in the tool list. They're signed with the SDK's test key, not by Light.
+
+**Next time:** start the phone with `scripts/emulator.sh start`, and after changing code run `scripts/emulator.sh install` to rebuild and reinstall.
+
 ## Getting a tool onto a phone
 
 Every push that changes `tool/` triggers the **Build APK** workflow on GitHub. Open the repo's **Actions** tab, pick the latest **Build APK** run, and download the file under **Artifacts**. It's a zip containing the installable `.apk`. You can also start a build by hand with **Run workflow**.
