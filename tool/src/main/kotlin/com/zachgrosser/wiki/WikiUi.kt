@@ -205,13 +205,27 @@ private fun Block.toAnnotatedString(onOpen: (String) -> Unit): AnnotatedString =
     }
 }
 
-/** The per-article credit line required by CC BY-SA. */
+/**
+ * The credit required by CC BY-SA, shown at the end of an article and of each section. With
+ * [showNotices], also the article's own credit notices for text it imported from other sources.
+ */
 @Composable
-fun ArticleCredit(title: String) {
-    LightText(
-        text = Attribution.forArticle(title),
-        variant = LightTextVariant.Detail,
-        lighten = true,
-        modifier = Modifier.padding(top = 1.5f.gridUnitsAsDp(), bottom = 2f.gridUnitsAsDp()),
-    )
+fun ArticleCredit(article: Article, showNotices: Boolean, onOpenArticle: (String) -> Unit) {
+    val unit = 1f.gridUnitsAsDp()
+    Column(modifier = Modifier.padding(top = unit * 1.5f, bottom = unit * 2f)) {
+        LightText(
+            text = Attribution.forArticle(article.title),
+            variant = LightTextVariant.Detail,
+            lighten = true,
+        )
+        if (showNotices && article.notices.isNotEmpty()) {
+            LightText(
+                text = "This article also credits:",
+                variant = LightTextVariant.Detail,
+                lighten = true,
+                modifier = Modifier.padding(top = unit * 0.75f, bottom = unit * 0.25f),
+            )
+            ArticleBlocks(article.notices, onOpenArticle)
+        }
+    }
 }

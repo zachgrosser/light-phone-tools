@@ -9,25 +9,38 @@ import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
+import io.ktor.client.statement.HttpResponse
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import kotlin.coroutines.cancellation.CancellationException
 
 const val WIKI_HOST = "en.wikipedia.org"
 
 /**
- * Wikimedia asks every app to identify itself with a descriptive User-Agent:
- * https://meta.wikimedia.org/wiki/User-Agent_policy
+ * Wikimedia requires apps to identify themselves, with a way to contact the developer:
+ * foundation.wikimedia.org/wiki/Policy:Wikimedia_Foundation_User-Agent_Policy
  */
-private const val USER_AGENT =
-    "LightPhoneWiki/0.1 (https://github.com/zachgrosser/light-phone-tools; Light Phone III tool)"
+private val USER_AGENT = "LightPhoneWiki/${BuildConfig.VERSION_NAME} (https://${Attribution.SOURCE_CODE_URL})"
 
 class ArticleNotFoundException(val title: String) : Exception("No article called $title")
+
+/**
+ * Wikipedia answered "429 Too Many Requests". Wikimedia's API rules require apps to slow down
+ * when asked, so Wiki doesn't retry on its own; the reader can try again later.
+ */
+class WikipediaBusyException : Exception("Wikipedia asked for fewer requests")
+
+/** A short, plain explanation of a failed request, for showing on screen. */
+fun errorMessage(error: Throwable): String = when (error) {
+    is WikipediaBusyException -> "Wikipedia is busy right now. Please try again in a minute."
+    else -> "Couldn't reach Wikipedia. Check your connection and try again."
+}
 
 /** Talks to Wikipedia. One shared HTTP client for the whole tool. */
 object WikiApi {
@@ -49,7 +62,7 @@ object WikiApi {
             parameter("q", query)
             parameter("limit", 20)
         }
-        check(response.status.isSuccess()) { "Search failed: HTTP ${response.status.value}" }
+        checkStatus(response)
         response.body<SearchResponse>().pages.map { page ->
             SearchResult(title = page.title, description = page.description?.trim()?.ifEmpty { null })
         }
@@ -68,7 +81,7 @@ object WikiApi {
             parameter("format", "json")
             parameter("formatversion", 2)
         }
-        check(response.status.isSuccess()) { "Article request failed: HTTP ${response.status.value}" }
+        checkStatus(response)
         val body = response.body<ParseResponse>()
         body.error?.let { apiError ->
             if (apiError.code == "missingtitle" || apiError.code == "invalidtitle") throw ArticleNotFoundException(title)
@@ -78,6 +91,11 @@ object WikiApi {
         withContext(Dispatchers.Default) {
             ArticleParser.parse(parsed.title, parsed.pageid, parsed.revid, parsed.text)
         }
+    }
+
+    private fun checkStatus(response: HttpResponse) {
+        if (response.status == HttpStatusCode.TooManyRequests) throw WikipediaBusyException()
+        check(response.status.isSuccess()) { "Wikipedia answered HTTP ${response.status.value}" }
     }
 
     /** Like runCatching, but lets coroutine cancellation through. */

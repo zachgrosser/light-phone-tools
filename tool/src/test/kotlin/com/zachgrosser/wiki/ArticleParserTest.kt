@@ -57,6 +57,8 @@ private val SYNTHETIC_PAGE = """
 <div class="reflist"><ol class="references"><li>Some citation</li></ol></div>
 <div class="mw-heading mw-heading3"><h3 id="Sources">Sources</h3></div>
 <ul><li>A book that should not appear</li></ul>
+<p><span class="noviewer" typeof="mw:File"><a href="/wiki/File:Free_logo.svg" class="mw-file-description"><img src="x.png" width="12" height="12"></a></span>&nbsp;This article incorporates text from a <a href="/wiki/Free_content" title="Free content">free content</a> work. Licensed under CC BY-SA 3.0. Text taken from <i>A Report on Cats</i>, FAO.</p>
+<p>This article incorporates text from a <a href="/wiki/Free_content">free content</a> work. Licensed under CC BY-SA 3.0. Text taken from <i>A Report on Cats</i>, FAO.</p>
 <div class="mw-heading mw-heading2"><h2 id="External_links">External links</h2></div>
 <ul><li><a class="external text" href="https://example.org">Official site</a></li></ul>
 <div role="navigation" class="navbox" aria-labelledby="Felines"><table class="nowraplinks"><tr><td>Lion · Tiger</td></tr></table></div>
@@ -171,6 +173,20 @@ class ArticleParserTest {
         val everything = (synthetic.lead + synthetic.sections.flatMap { it.blocks }).joinToString { it.text }
         listOf("Infobox", "cells are skipped", "Image caption", "citation", "book", "Official site", "Tiger", "hidden")
             .forEach { assertFalse(it in everything, "unexpected '$it'") }
+    }
+
+    @Test
+    fun `credit notices for imported text are kept from left-out sections`() {
+        val notice = synthetic.notices.single()
+        assertEquals(BlockKind.Note, notice.kind)
+        assertEquals(
+            "This article incorporates text from a free content work. Licensed under CC BY-SA 3.0. " +
+                "Text taken from A Report on Cats, FAO.",
+            notice.text,
+        )
+        assertEquals(listOf("Free content"), notice.linkTargets())
+        assertEquals("free content", notice.spanText(notice.spans.first { it.kind == SpanKind.Link }))
+        assertTrue(lightPhone.notices.isEmpty())
     }
 
     @Test

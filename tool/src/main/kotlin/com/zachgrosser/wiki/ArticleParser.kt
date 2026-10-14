@@ -32,6 +32,12 @@ object ArticleParser {
         "module", "mediawiki", "timedtext", "book", "project", "wp", "gadget", "topic",
     )
 
+    /**
+     * Matches the credit notices Wikipedia shows for imported text, such as "This article
+     * incorporates text from a free content work" or "…incorporates public domain material from…".
+     */
+    internal val ATTRIBUTION_NOTICE = Regex("""\bincorporates\b[^.]*\b(text|material)\b""", RegexOption.IGNORE_CASE)
+
     /** Returns the article title an internal link points to, or null for anything else. */
     fun linkTarget(href: String?): String? {
         if (href == null || !href.startsWith("/wiki/")) return null
@@ -267,6 +273,7 @@ private class ArticleBuilder : HtmlHandler {
     private val lead = ArrayList<Block>()
     private val sections = ArrayList<Pair<String, ArrayList<Block>>>()
     private var current: ArrayList<Block> = lead
+    private val notices = ArrayList<Block>()
     private var droppedLevel: Int? = null
 
     private val skipping get() = skipUntilDepth >= 0
@@ -392,7 +399,6 @@ private class ArticleBuilder : HtmlHandler {
     }
 
     private fun appendText(value: String) {
-        if (droppedLevel != null) return
         val script = stack.lastOrNull { it.name == "sup" || it.name == "sub" }?.name
         val mapped = when (script) {
             "sup" -> toScript(value, SUPERSCRIPTS, "^")
@@ -430,14 +436,29 @@ private class ArticleBuilder : HtmlHandler {
 
     private fun flushBlock() {
         trimTrailingSpaces()
-        if (text.isNotBlank() && droppedLevel == null) {
+        val keep = text.isNotBlank() &&
+            (droppedLevel == null || ArticleParser.ATTRIBUTION_NOTICE.containsMatchIn(text))
+        if (keep) {
             // Close styles that are still open; they continue in the next block.
             stack.forEach { frame ->
                 val kind = frame.span ?: return@forEach
                 if (kind == SpanKind.Link && frame.linkTarget == null) return@forEach
                 addSpan(frame.spanStart, text.length, kind, frame.linkTarget)
             }
-            current.add(makeBlock(text.toString(), spans.sortedBy { it.start }))
+            // Drop leading spaces (including the no-break space some templates start with).
+            var leading = 0
+            while (leading < text.length && text[leading].isWhitespace()) leading++
+            text.delete(0, leading)
+            val blockSpans = spans
+                .map { it.copy(start = (it.start - leading).coerceAtLeast(0), end = it.end - leading) }
+                .filter { it.end > it.start }
+                .sortedBy { it.start }
+            if (droppedLevel == null) {
+                current.add(makeBlock(text.toString(), blockSpans))
+            } else {
+                // Inside a left-out section (Sources, References…), keep only credit notices.
+                notices.add(Block(BlockKind.Note, text.toString(), blockSpans))
+            }
         }
         text.setLength(0)
         spans.clear()
@@ -498,6 +519,7 @@ private class ArticleBuilder : HtmlHandler {
             sections = sections
                 .map { (name, blocks) -> Section(name, withoutEmptySubheadings(blocks)) }
                 .filter { section -> section.blocks.any { it.kind != BlockKind.Subheading } },
+            notices = notices.distinctBy { it.text },
         )
     }
 

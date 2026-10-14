@@ -60,11 +60,10 @@ class ArticleViewModel(
                 },
                 onFailure = { error ->
                     _state.value = ArticleState.Failed(
-                        if (error is ArticleNotFoundException) {
-                            "Wikipedia doesn't have an article called “$requestedTitle”."
-                        } else {
-                            "Couldn't load this article. Check your connection. " +
-                                "Saved articles can still be read offline."
+                        when (error) {
+                            is ArticleNotFoundException ->
+                                "Wikipedia doesn't have an article called “$requestedTitle”."
+                            else -> errorMessage(error) + " Saved articles can still be read offline."
                         },
                     )
                 },
@@ -202,7 +201,7 @@ internal fun ArticleContent(
                     )
                 }
             }
-            ArticleCredit(article.title)
+            ArticleCredit(article, showNotices = true, onOpenArticle = onOpenArticle)
         }
     }
 }

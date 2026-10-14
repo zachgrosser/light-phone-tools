@@ -59,6 +59,13 @@ private fun SectionPreview() = WikiTheme {
 
 @LightDevicePreviews
 @Composable
+private fun ArticleEndPreview() = WikiTheme {
+    // The end of an article: its credit, license, changes note and imported-text notices.
+    ArticleCredit(SAMPLE_ARTICLE, showNotices = true, onOpenArticle = {})
+}
+
+@LightDevicePreviews
+@Composable
 private fun AboutPreview() = WikiTheme { AboutContent(onBack = {}) }
 
 @LightDevicePreviews
@@ -107,6 +114,14 @@ private val SAMPLE_ARTICLE = Article(
         ),
         Section(title = "Software", blocks = listOf(Block(BlockKind.Paragraph, "More text."))),
         Section(title = "Reception", blocks = listOf(Block(BlockKind.Paragraph, "More text."))),
+    ),
+    notices = listOf(
+        linked(
+            "This article incorporates text from a free content work. Licensed under CC BY-SA 3.0. " +
+                "Text taken from a sample report.",
+            "free content",
+            kind = BlockKind.Note,
+        ),
     ),
 )
 

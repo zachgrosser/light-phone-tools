@@ -14,6 +14,12 @@ data class Article(
     val description: String? = null,
     val lead: List<Block>,
     val sections: List<Section>,
+    /**
+     * Credit notices for text the article imported from other free sources ("This article
+     * incorporates text from…"). Wikipedia shows these under Sources or References, which Wiki
+     * otherwise leaves out, and its terms of use ask reusers to keep them.
+     */
+    val notices: List<Block> = emptyList(),
 )
 
 @Serializable

@@ -89,7 +89,7 @@ internal fun SectionContent(
                             .padding(top = unit),
                     )
                 }
-                ArticleCredit(article.title)
+                ArticleCredit(article, showNotices = false, onOpenArticle = onOpenArticle)
             }
         }
     }

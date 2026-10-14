@@ -68,12 +68,12 @@ class SearchViewModel : LightViewModel<Unit>() {
                 onSuccess = { results ->
                     _state.update { it.copy(mode = SearchMode.Results(query, results)) }
                 },
-                onFailure = {
+                onFailure = { error ->
                     _state.update {
                         it.copy(
                             mode = SearchMode.Typing,
                             typingSession = it.typingSession + 1,
-                            error = "Couldn't reach Wikipedia. Check your connection and try again.",
+                            error = errorMessage(error),
                         )
                     }
                 },
