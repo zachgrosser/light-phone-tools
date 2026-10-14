@@ -39,9 +39,10 @@ find_sdk() {
   fail "Couldn't find the Android SDK. Install Android Studio and finish its setup wizard first."
 }
 
-# Gradle 9.0 runs on Java 17 to 24. Newer Android Studios bundle Java 25, which is too new.
-MIN_JAVA=17
-MAX_JAVA=24
+# Light's build tools are pinned to Java 17 (jvmToolchain(17)), so the build needs a Java 17
+# installed, and Gradle 9.0 itself can't run on the Java 25 that newer Android Studios bundle.
+# Simplest is to run everything on Java 17.
+NEEDED_JAVA=17
 
 # Prints the major version of the Java in the given home folder (e.g. 21), or nothing.
 java_major() {
@@ -54,27 +55,17 @@ java_major() {
   printf '%s' "$version"
 }
 
-java_fits() {
-  local major
-  major="$(java_major "$1")"
-  [ -n "$major" ] && [ "$major" -ge "$MIN_JAVA" ] && [ "$major" -le "$MAX_JAVA" ]
-}
-
 find_java() {
-  local candidate version
-  # Candidates in order of preference: JAVA_HOME, then Java 21 and 17 (the versions Light builds
-  # with), then any other Java on this Mac, including ones Android Studio downloaded.
+  local candidate
+  # Places a Java 17 might be: JAVA_HOME, macOS's registry (which includes JDKs Android Studio
+  # downloaded), the usual folders, Homebrew, and Android Studio's own Java.
   {
     [ -n "${JAVA_HOME:-}" ] && printf '%s\n' "$JAVA_HOME"
-    if [ -x /usr/libexec/java_home ]; then
-      for version in 21 17 24 23 22 18 19 20; do
-        /usr/libexec/java_home -v "$version" 2>/dev/null || true
-      done
-    fi
+    [ -x /usr/libexec/java_home ] && /usr/libexec/java_home -v "$NEEDED_JAVA" 2>/dev/null
     for candidate in "$HOME"/Library/Java/JavaVirtualMachines/*/Contents/Home \
                      /Library/Java/JavaVirtualMachines/*/Contents/Home \
-                     /opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home \
                      /opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home \
+                     /usr/local/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home \
                      "/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
                      "$HOME/Applications/Android Studio.app/Contents/jbr/Contents/Home"; do
       [ -d "$candidate" ] && printf '%s\n' "$candidate"
@@ -83,14 +74,14 @@ find_java() {
   } > "$LOG_DIR/java-candidates.txt"
 
   while IFS= read -r candidate; do
-    if java_fits "$candidate"; then
+    if [ "$(java_major "$candidate")" = "$NEEDED_JAVA" ]; then
       export JAVA_HOME="$candidate"
-      echo "Using Java $(java_major "$candidate") from $candidate"
+      echo "Using Java $NEEDED_JAVA from $candidate"
       return
     fi
   done < "$LOG_DIR/java-candidates.txt"
 
-  fail "Light's build needs Java $MIN_JAVA to $MAX_JAVA, and none was found (Android Studio's own Java may be newer). To get Java 21: in Android Studio, open Settings > Build, Execution, Deployment > Build Tools > Gradle, click Gradle JDK > Download JDK, choose version 21 and click Download. Then run this again."
+  fail "Light's build needs Java $NEEDED_JAVA, and this Mac doesn't have it yet. To get it: in Android Studio, open Settings > Build, Execution, Deployment > Build Tools > Gradle, click the Gradle JDK menu > Download JDK, choose version $NEEDED_JAVA (any vendor) and click Download. Then run this again."
 }
 
 setup_tools() {
@@ -183,9 +174,21 @@ wait_for_boot() {
   sleep 3
 }
 
+# True if this virtual phone is running and was started in the mode LightOS needs.
+running_in_light_mode() {
+  ps -axo command= 2>/dev/null | grep -e "-avd $AVD" | grep -e "-writable-system" >/dev/null
+}
+
 start_emulator() {
   if [ -n "$(running_emulator)" ]; then
-    fail "A virtual phone is already running. Close its window first, so it can restart in the mode LightOS needs."
+    if running_in_light_mode; then
+      echo "'$AVD' is already running in the right mode; using it."
+      export ANDROID_SERIAL
+      ANDROID_SERIAL="$(running_emulator)"
+      wait_for_boot
+      return
+    fi
+    fail "A virtual phone is already running, but not in the mode LightOS needs. Close its window first, then run this again."
   fi
   say "Starting '$AVD' (a window will open; leave it running)"
   # -writable-system keeps the LightOS emulator installed in the system partition. It's needed

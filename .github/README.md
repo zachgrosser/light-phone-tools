@@ -63,7 +63,9 @@ Light's emulator shows a tool the way a Light Phone III would, on your computer.
 
 **1. Install Android Studio.** Download it from [developer.android.com/studio](https://developer.android.com/studio) (on an M-series Mac, pick the "Mac with Apple chip" version). Open it and run the setup wizard with the **Standard** options.
 
-**2. Open this repo in Android Studio.** On the welcome screen, choose **Clone Repository**, sign in to GitHub, pick `light-phone-tools` and clone it. When it opens, wait for the progress bar at the bottom ("Gradle sync") to finish. To try a tool that's still in a pull request, switch to its branch: click the branch name at the top of the window, then choose the branch under **Remote**, then **Checkout**.
+**2. Get Java 17.** Light's build tools need exactly Java 17, which Android Studio doesn't include. In Android Studio, open **Settings → Build, Execution, Deployment → Build Tools → Gradle**, click the **Gradle JDK** menu, choose **Download JDK**, pick version **17** (any vendor) and click **Download**. Keep it selected as the Gradle JDK.
+
+**2b. Open this repo in Android Studio.** On the welcome screen, choose **Clone Repository**, sign in to GitHub, pick `light-phone-tools` and clone it. When it opens, wait for the progress bar at the bottom ("Gradle sync") to finish. To try a tool that's still in a pull request, switch to its branch: click the branch name at the top of the window, then choose the branch under **Remote**, then **Checkout**.
 
 **3. Create a virtual phone.** Open **Device Manager** (the phone icon on the right edge) and click **+**, then **Create Virtual Device**:
 - Pick any phone, for example **Medium Phone**. The script resizes the screen to the Light Phone III's later.
