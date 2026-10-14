@@ -67,7 +67,7 @@ Light's emulator shows a tool the way a Light Phone III would, on your computer.
 
 **3. Create a virtual phone.** Open **Device Manager** (the phone icon on the right edge) and click **+**, then **Create Virtual Device**:
 - Pick any phone, for example **Medium Phone**. The script resizes the screen to the Light Phone III's later.
-- For the system image, set **Services** to **No Google APIs** (not Google Play) and choose **API 34** ("UpsideDownCake"), **arm64-v8a**. Download it if asked.
+- For the system image, set **API** to **API 34** ("UpsideDownCake") and **Services** to **Android Open Source** (some versions call it **No Google APIs**; not Google Play). Pick **ARM 64 v8a System Image** and click its download arrow.
 - Name it `LightPhone` and click **Finish**. **Don't press its play button**; the script starts it in the mode LightOS needs.
 
 **4. Run the setup script.** Open the **Terminal** tab at the bottom of Android Studio and run:
