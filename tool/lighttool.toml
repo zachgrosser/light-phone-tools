@@ -5,7 +5,8 @@ versionCode = 1
 versionName = "0.1.0"
 permissions = ["android.permission.INTERNET"]
 capabilities = []
-orientation = "portrait"
+# No orientation lock: on the Light Phone III's near-square screen, Android shrinks
+# portrait-locked apps into a narrower box instead of using the full width.
 # LightOS on a real Light Phone III. For the LightOS emulator, use the line below instead
 # and build with -DlightSdk.allowAltServerPackage=true
 # serverPackage = "com.thelightphone.sdk.emulator"

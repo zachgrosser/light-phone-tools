@@ -35,46 +35,61 @@ class SectionScreen(
 
     @Composable
     override fun Content() {
-        val section = article.sections.getOrNull(index) ?: return
-        val next = article.sections.getOrNull(index + 1)
-        val unit = 1f.gridUnitsAsDp()
-
         WikiTheme {
-            Column(modifier = Modifier.fillMaxSize()) {
-                LightTopBar(
-                    leftButton = backButton { goBack() },
-                    center = LightTopBarCenter.Text(article.title),
+            SectionContent(
+                article = article,
+                index = index,
+                onBack = { goBack() },
+                onNext = { index += 1 },
+                onOpenArticle = { target -> navigateTo({ ArticleScreen(it, target) }) },
+            )
+        }
+    }
+}
+
+@Composable
+internal fun SectionContent(
+    article: Article,
+    index: Int,
+    onBack: () -> Unit,
+    onNext: () -> Unit,
+    onOpenArticle: (String) -> Unit,
+) {
+    val section = article.sections.getOrNull(index) ?: return
+    val next = article.sections.getOrNull(index + 1)
+    val unit = 1f.gridUnitsAsDp()
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        LightTopBar(
+            leftButton = backButton(onBack),
+            center = LightTopBarCenter.Text(article.title),
+        )
+        // A new scroll position for each section.
+        key(index) {
+            LightScrollView(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(start = unit),
+            ) {
+                LightText(
+                    text = section.title,
+                    variant = LightTextVariant.Heading,
+                    modifier = Modifier.padding(bottom = unit * 0.5f),
                 )
-                // A new scroll position for each section.
-                key(index) {
-                    LightScrollView(
+                ArticleBlocks(section.blocks, onOpenArticle)
+                if (next != null) {
+                    LightText(
+                        text = "Next: ${next.title}",
+                        variant = LightTextVariant.Copy,
+                        underline = true,
                         modifier = Modifier
-                            .weight(1f)
                             .fillMaxWidth()
-                            .padding(start = unit),
-                    ) {
-                        LightText(
-                            text = section.title,
-                            variant = LightTextVariant.Heading,
-                            modifier = Modifier.padding(bottom = unit * 0.5f),
-                        )
-                        ArticleBlocks(section.blocks) { target ->
-                            navigateTo({ ArticleScreen(it, target) })
-                        }
-                        if (next != null) {
-                            LightText(
-                                text = "Next: ${next.title}",
-                                variant = LightTextVariant.Copy,
-                                underline = true,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .lightClickable { index += 1 }
-                                    .padding(top = unit),
-                            )
-                        }
-                        ArticleCredit(article.title)
-                    }
+                            .lightClickable(onClick = onNext)
+                            .padding(top = unit),
+                    )
                 }
+                ArticleCredit(article.title)
             }
         }
     }

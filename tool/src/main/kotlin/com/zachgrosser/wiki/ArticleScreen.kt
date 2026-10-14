@@ -147,7 +147,7 @@ class ArticleScreen(
 }
 
 @Composable
-private fun ArticleContent(
+internal fun ArticleContent(
     article: Article,
     isSaved: Boolean,
     notice: String?,

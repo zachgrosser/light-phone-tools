@@ -150,7 +150,7 @@ class SearchScreen(sealedActivity: SealedLightActivity) :
 }
 
 @Composable
-private fun ResultsContent(
+internal fun ResultsContent(
     query: String,
     results: List<SearchResult>,
     onBack: () -> Unit,

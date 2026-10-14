@@ -1,12 +1,16 @@
 package com.zachgrosser.wiki
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -110,35 +114,41 @@ class HomeScreen(sealedActivity: SealedLightActivity) :
     }
 }
 
-/** Shown each time the tool starts: credits Wikipedia and states the license. Tap to skip. */
+/**
+ * Shown each time the tool starts: credits Wikipedia and states the license. Tap to skip.
+ * Centred on screens tall enough to hold it, and scrollable on shorter ones (like the Light Flip).
+ */
 @Composable
-private fun SplashContent(onContinue: () -> Unit) {
+internal fun SplashContent(onContinue: () -> Unit) {
     val unit = 1f.gridUnitsAsDp()
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .lightClickable(onClick = onContinue)
-            .padding(horizontal = 2f.gridUnitsAsDp()),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        LightText(text = "Wiki", variant = LightTextVariant.Subtitle, align = TextAlign.Center)
-        Spacer(Modifier.height(unit * 1.5f))
-        LightText(text = Attribution.SOURCE, variant = LightTextVariant.Copy, align = TextAlign.Center)
-        Spacer(Modifier.height(unit * 1.5f))
-        LightText(text = Attribution.LICENSE, variant = LightTextVariant.Detail, align = TextAlign.Center)
-        Spacer(Modifier.height(unit))
-        LightText(
-            text = Attribution.NOT_AFFILIATED,
-            variant = LightTextVariant.Detail,
-            lighten = true,
-            align = TextAlign.Center,
-        )
+    BoxWithConstraints(modifier = Modifier.fillMaxSize().lightClickable(onClick = onContinue)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .heightIn(min = maxHeight)
+                .padding(horizontal = 2f.gridUnitsAsDp(), vertical = unit),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            LightText(text = "Wiki", variant = LightTextVariant.Subtitle, align = TextAlign.Center)
+            Spacer(Modifier.height(unit * 1.5f))
+            LightText(text = Attribution.SOURCE, variant = LightTextVariant.Copy, align = TextAlign.Center)
+            Spacer(Modifier.height(unit * 1.5f))
+            LightText(text = Attribution.LICENSE, variant = LightTextVariant.Detail, align = TextAlign.Center)
+            Spacer(Modifier.height(unit))
+            LightText(
+                text = Attribution.NOT_AFFILIATED,
+                variant = LightTextVariant.Detail,
+                lighten = true,
+                align = TextAlign.Center,
+            )
+        }
     }
 }
 
 @Composable
-private fun HomeContent(
+internal fun HomeContent(
     savedArticles: List<SavedArticle>,
     onSearch: () -> Unit,
     onOpenArticle: (String) -> Unit,
@@ -195,7 +205,7 @@ private fun HomeContent(
 }
 
 @Composable
-private fun AboutContent(onBack: () -> Unit) {
+internal fun AboutContent(onBack: () -> Unit) {
     val unit = 1f.gridUnitsAsDp()
     Column(modifier = Modifier.fillMaxSize()) {
         LightTopBar(leftButton = backButton(onBack), center = LightTopBarCenter.Text("About"))

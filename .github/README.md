@@ -84,6 +84,10 @@ It starts the virtual phone, installs Light's LightOS emulator into it as a syst
 
 **Next time:** start the phone with `scripts/emulator.sh start`, and after changing code run `scripts/emulator.sh install` to rebuild and reinstall.
 
+**Other screen sizes.** Light's devices don't all share one screen: the Light Phone III is 1080 × 1240 and the Light Flip (due April 2027) is 480 × 640. Two ways to check a layout on both:
+- **Previews:** open `tool/src/main/kotlin/com/zachgrosser/wiki/WikiPreviews.kt` and click **Split** at the top right. Every screen appears at both sizes, with no emulator needed.
+- **On the virtual phone:** `scripts/emulator.sh screen flip` switches its screen to the Flip's size; `scripts/emulator.sh screen lp3` switches back.
+
 ## Getting a tool onto a phone
 
 Every push that changes `tool/` triggers the **Build APK** workflow on GitHub. Open the repo's **Actions** tab, pick the latest **Build APK** run, and download the file under **Artifacts**. It's a zip containing the installable `.apk`. You can also start a build by hand with **Run workflow**.

@@ -7,6 +7,8 @@
 #   scripts/emulator.sh start [avd]   starts the virtual phone later on (always use this, not the
 #                                     play button in Android Studio, or LightOS won't be there)
 #   scripts/emulator.sh install       rebuilds our tool and installs it on the running phone
+#   scripts/emulator.sh screen flip   makes the running phone's screen match the Light Flip
+#                                     (480 x 640); "screen lp3" switches back
 #
 # [avd] is the virtual phone's name from Android Studio's Device Manager. You can leave it out
 # if you only have one.
@@ -370,8 +372,26 @@ case "$COMMAND" in
     use_running_emulator
     install_tool
     ;;
+  screen)
+    setup_tools
+    use_running_emulator
+    case "${2:-}" in
+      flip)
+        # Light Flip: 480 x 640 pixels on a 2.8" screen (about 285 pixels per inch).
+        "$ADB" shell wm size 480x640
+        "$ADB" shell wm density 280
+        say "The virtual phone now has the Light Flip's screen (480 x 640). Back with: scripts/emulator.sh screen lp3"
+        ;;
+      lp3)
+        "$ADB" shell wm size reset
+        "$ADB" shell wm density reset
+        say "The virtual phone is back to the Light Phone III's screen (1080 x 1240)."
+        ;;
+      *) fail "Which screen? Use: scripts/emulator.sh screen flip   or   scripts/emulator.sh screen lp3" ;;
+    esac
+    ;;
   *)
-    sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
     exit 1
     ;;
 esac
