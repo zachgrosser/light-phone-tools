@@ -39,19 +39,62 @@ find_sdk() {
   fail "Couldn't find the Android SDK. Install Android Studio and finish its setup wizard first."
 }
 
+# Gradle 9.0 runs on Java 17 to 24. Newer Android Studios bundle Java 25, which is too new.
+MIN_JAVA=17
+MAX_JAVA=24
+
+# Prints the major version of the Java in the given home folder (e.g. 21), or nothing.
+java_major() {
+  local home="$1" line version
+  [ -x "$home/bin/java" ] || return 0
+  line="$("$home/bin/java" -version 2>&1 | grep -i 'version "' | head -1 || true)"
+  version="$(printf '%s' "$line" | sed -n 's/.*version "\([0-9][0-9]*\).*/\1/p')"
+  # Java 8 and older report "1.8".
+  [ "$version" = "1" ] && version=8
+  printf '%s' "$version"
+}
+
+java_fits() {
+  local major
+  major="$(java_major "$1")"
+  [ -n "$major" ] && [ "$major" -ge "$MIN_JAVA" ] && [ "$major" -le "$MAX_JAVA" ]
+}
+
 find_java() {
-  if [ -n "${JAVA_HOME:-}" ] && [ -x "$JAVA_HOME/bin/java" ]; then return; fi
-  local studio
-  for studio in "/Applications/Android Studio.app" "$HOME/Applications/Android Studio.app"; do
-    if [ -x "$studio/Contents/jbr/Contents/Home/bin/java" ]; then
-      export JAVA_HOME="$studio/Contents/jbr/Contents/Home"
+  local candidate version
+  # Candidates in order of preference: JAVA_HOME, then Java 21 and 17 (the versions Light builds
+  # with), then any other Java on this Mac, including ones Android Studio downloaded.
+  {
+    [ -n "${JAVA_HOME:-}" ] && printf '%s\n' "$JAVA_HOME"
+    if [ -x /usr/libexec/java_home ]; then
+      for version in 21 17 24 23 22 18 19 20; do
+        /usr/libexec/java_home -v "$version" 2>/dev/null || true
+      done
+    fi
+    for candidate in "$HOME"/Library/Java/JavaVirtualMachines/*/Contents/Home \
+                     /Library/Java/JavaVirtualMachines/*/Contents/Home \
+                     /opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home \
+                     /opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home \
+                     "/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
+                     "$HOME/Applications/Android Studio.app/Contents/jbr/Contents/Home"; do
+      [ -d "$candidate" ] && printf '%s\n' "$candidate"
+    done
+    true
+  } > "$LOG_DIR/java-candidates.txt"
+
+  while IFS= read -r candidate; do
+    if java_fits "$candidate"; then
+      export JAVA_HOME="$candidate"
+      echo "Using Java $(java_major "$candidate") from $candidate"
       return
     fi
-  done
-  fail "Couldn't find Java. Install Android Studio in your Applications folder, or set JAVA_HOME."
+  done < "$LOG_DIR/java-candidates.txt"
+
+  fail "Light's build needs Java $MIN_JAVA to $MAX_JAVA, and none was found (Android Studio's own Java may be newer). To get Java 21: in Android Studio, open Settings > Build, Execution, Deployment > Build Tools > Gradle, click Gradle JDK > Download JDK, choose version 21 and click Download. Then run this again."
 }
 
 setup_tools() {
+  mkdir -p "$LOG_DIR"
   find_sdk
   find_java
   ADB="$SDK/platform-tools/adb"
