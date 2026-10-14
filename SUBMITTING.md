@@ -4,7 +4,7 @@ Light builds and signs community tools from a **public** GitHub repo, then revie
 
 ## Before submitting
 
-- [ ] **Merged into `main`.** Light reads the tool's package name from the default branch.
+- [ ] **Merged into `main`.** Light reads the tool's package name from the default branch. (A pull request that brings in Light's SDK, as the first Wiki one does, uses **Create a merge commit**, not squash.)
 - [ ] **Latest Light SDK merged in.** Light requires it (see [DEVELOPING.md §6](DEVELOPING.md#6-getting-lights-latest-sdk)).
 - [ ] **The Tool workflow is green on `main`**, especially the release build, which matches what Light's server runs.
 - [ ] **Tried the release APK** on the emulator or a phone (DEVELOPING.md §5): search, open an article, follow a link, read sections, star it, read it offline, About.

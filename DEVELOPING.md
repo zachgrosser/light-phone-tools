@@ -86,4 +86,6 @@ git fetch upstream && git merge upstream/main
 git push -u origin sdk-update
 ```
 
+Merge that pull request with **Create a merge commit**, never **Squash and merge**: git needs Light's commits kept as they are to know what's already been merged next time.
+
 Because we only edit `tool/` (plus our own docs and scripts), these merges rarely clash. If `tool/lighttool.toml` or `tool/build.gradle.kts` clashes, keep our values and take Light's new lines.

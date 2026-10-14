@@ -92,6 +92,8 @@ Once it's approved and the check is green, click **Squash and merge** on GitHub,
 gh pr merge --squash --delete-branch
 ```
 
+**Exception: a pull request that brings in Light's SDK** (like `sdk-update`, below) must use **Create a merge commit** instead (the arrow next to the green button). Squashing it hides Light's history from git, and the next SDK update then clashes with every file Light changed.
+
 Then everyone runs `git checkout main && git pull` to catch up.
 
 ---
