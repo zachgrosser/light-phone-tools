@@ -32,6 +32,7 @@ This repo is a copy of Light's SDK with our tool added. **Our code lives in `too
 | `scripts/emulator.sh` | Sets up and runs Light's emulator on a Mac | ✅ Yes |
 | `.github/` | This page, our build workflow, pull request and issue templates | ✅ Yes |
 | `DEVELOPING.md`, `COLLABORATING.md`, `SUBMITTING.md` | Our guides | ✅ Yes |
+| `CLAUDE.md` | Notes Claude Code reads at the start of every session (also a good summary for people) | ✅ Yes |
 | `examples/` | Light's sample tools (weather, authenticator, …) | 👀 Read for ideas |
 | `docs/`, `README.md`, `TOOL_GUIDELINES.md`, `CONTRIBUTING.md` | Light's documentation | 👀 Read |
 | `sdk/`, `plugin/`, `lint-rules/`, `builder/`, `signer/`, … | The SDK itself | ❌ No, it comes from Light |
