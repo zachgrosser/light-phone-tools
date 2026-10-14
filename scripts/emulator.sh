@@ -151,6 +151,8 @@ shape_like_light_phone() {
   set_ini "$config" skin.dynamic yes
   set_ini "$config" showDeviceFrame no
   set_ini "$config" hw.initialOrientation portrait
+  # Pass the computer's keyboard through as a hardware keyboard, to test typing on one.
+  set_ini "$config" hw.keyboard yes
   echo "Set '$AVD' to the Light Phone III's screen size (old settings kept in config.ini.before-light)."
 }
 

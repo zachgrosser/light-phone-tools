@@ -44,6 +44,8 @@ scripts/emulator.sh screen flip   # the virtual phone takes the Flip's screen si
 scripts/emulator.sh screen lp3    # and back
 ```
 
+**Typing on a hardware keyboard.** With the emulator window in front, your computer's keyboard acts as a hardware keyboard plugged into the phone: typing on it should go straight into Wiki's search box, and the on-screen keyboard should step aside. (If nothing happens, the setting is off: in **Device Manager**, edit the virtual phone, open **Advanced Settings** and tick **Enable keyboard input**.)
+
 Faster still: open `tool/src/main/kotlin/com/zachgrosser/wiki/WikiPreviews.kt` and click **Split** at the top right. Every screen appears at both sizes, without an emulator.
 
 ## 3. Tests
@@ -52,7 +54,7 @@ Faster still: open `tool/src/main/kotlin/com/zachgrosser/wiki/WikiPreviews.kt` a
 ./gradlew :tool:testDebugUnitTest -DlightSdk.toolOnly=true
 ```
 
-They cover turning Wikipedia's HTML into text (`ArticleParserTest`), saved articles (`SavedArticlesTest`) and the credit text (`AttributionTest`). `-DlightSdk.toolOnly=true` skips building Light's example tools, which saves minutes.
+They cover turning Wikipedia's HTML into text (`ArticleParserTest`), saved articles (`SavedArticlesTest`), the credit text (`AttributionTest`) and keypad typing (`MultiTapTest`). `-DlightSdk.toolOnly=true` skips building Light's example tools, which saves minutes.
 
 ## 4. What GitHub checks
 

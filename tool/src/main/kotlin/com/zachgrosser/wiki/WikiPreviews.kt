@@ -1,7 +1,13 @@
 package com.zachgrosser.wiki
 
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.tooling.preview.Preview
+import com.thelightphone.lp3Keyboard.ui.LayoutOptions
+import com.thelightphone.lp3Keyboard.ui.viewmodel.EnQwertyLp3KeyboardViewModel
+import com.thelightphone.sdk.ui.defaultKeyboardOptions
+import kotlinx.coroutines.flow.MutableStateFlow
 
 // Previews of every screen at each Light device's screen size, to check layouts without an
 // emulator. In Android Studio, open this file and choose "Split" or "Design" (top right).
@@ -21,14 +27,39 @@ private fun SplashPreview() = WikiTheme { SplashContent(onContinue = {}) }
 
 @LightDevicePreviews
 @Composable
-private fun HomeEmptyPreview() = WikiTheme {
-    HomeContent(savedArticles = emptyList(), onSearch = {}, onOpenArticle = {}, onAbout = {})
-}
+private fun HomeEmptyPreview() = WikiTheme { HomePreview(query = "", saved = emptyList(), keyboardShown = true) }
 
 @LightDevicePreviews
 @Composable
-private fun HomeWithSavedPreview() = WikiTheme {
-    HomeContent(savedArticles = SAMPLE_SAVED, onSearch = {}, onOpenArticle = {}, onAbout = {})
+private fun HomeWithSavedPreview() = WikiTheme { HomePreview(query = "Amsterdam", saved = SAMPLE_SAVED, keyboardShown = true) }
+
+/** After typing on a hardware keyboard or keypad: the on-screen keyboard steps aside. */
+@LightDevicePreviews
+@Composable
+private fun HomeHardwareKeyboardPreview() = WikiTheme {
+    HomePreview(query = "Amsterdam", saved = SAMPLE_SAVED, keyboardShown = false)
+}
+
+@Composable
+private fun HomePreview(query: String, saved: List<SavedArticle>, keyboardShown: Boolean) {
+    val state = remember { TextFieldState(query) }
+    val keyboard = remember {
+        EnQwertyLp3KeyboardViewModel<Unit>(
+            passedCallback = SearchKeyboardCallback(state, onSearch = {}, onHaptic = {}),
+            optionsForLayout = { layout -> LayoutOptions(!layout.isRootLayout) },
+            keyboardOptionsFlow = MutableStateFlow(defaultKeyboardOptions()),
+        )
+    }
+    HomeContent(
+        query = state,
+        savedArticles = saved,
+        keyboard = if (keyboardShown) keyboard else null,
+        onSearch = {},
+        onTapSearchBox = {},
+        onHardwareKey = { false },
+        onOpenArticle = {},
+        onAbout = {},
+    )
 }
 
 @LightDevicePreviews

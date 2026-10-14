@@ -4,8 +4,8 @@ A Light Phone tool for searching and reading Wikipedia. Settings are in [`lightt
 
 ## What it does
 
-- **Start-up screen** credits Wikipedia and states the CC BY-SA 4.0 license; tap to skip.
-- **Search**, using Wikipedia's own search, with each result's one-line description.
+- **Start-up screen** credits Wikipedia and states the CC BY-SA 4.0 license; tap it or start typing to skip.
+- **Search** straight away: Wiki opens on the search box with Light's on-screen keyboard up and saved articles below. Results come from Wikipedia's own search, each with its one-line description.
 - **Read**: the intro, then a contents list; each section opens on its own screen with a "Next" link. Links to other articles are tappable; images, tables, infoboxes and citations are left out.
 - **Save** with the star to read offline. Saved articles open from the phone first, with or without a connection.
 - **About** explains the source, license, accuracy, privacy, trademark and how to give feedback.
@@ -16,8 +16,10 @@ Wiki only needs the `INTERNET` permission. It has no ads, analytics or tracking,
 
 | File | What it does |
 |---|---|
-| `HomeScreen.kt` | Start-up screen, search box, saved articles, About |
-| `SearchScreen.kt` | The keyboard and search results |
+| `HomeScreen.kt` | Start-up screen; the home screen (search box, saved articles, keyboard); About |
+| `SearchInput.kt` | Typing a search: the search box, Light's on-screen keyboard, hardware keyboards and keypads |
+| `MultiTap.kt` | Letters from a phone keypad: 2 = abc, 3 = def, … |
+| `SearchScreen.kt` | Search results |
 | `ArticleScreen.kt` | An article's intro and contents; saving it |
 | `SectionScreen.kt` | Reading one section |
 | `WikiApi.kt` | Requests to Wikipedia: search (`/w/rest.php/v1/search/page`) and articles (`/w/api.php?action=parse`) |
@@ -29,6 +31,18 @@ Wiki only needs the `INTERNET` permission. It has no ads, analytics or tracking,
 | `WikiPreviews.kt` | Android Studio previews of every screen at Light Phone III and Light Flip sizes |
 
 `ArticleParser` is the part most likely to need care. It keeps paragraphs, headings, lists, quotes and "Main article:" notes. It skips anything that doesn't suit a small text-only screen: images, tables, infoboxes, navigation boxes and citation markers. It also leaves out the reference sections (References, Notes, Sources, External links and so on), but keeps any credit notice found there for imported text (see below). Formulas become readable text, and superscript and subscript numbers become ² and ₂. Its tests use a real section of the "Light Phone" article plus a made-up page full of edge cases.
+
+## Keyboards
+
+The home screen is ready to type into as soon as it appears, whichever way the phone types:
+
+- **Light Phone III:** Light's own on-screen keyboard (from the SDK) is up from the start. Return or the search button searches.
+- **A Bluetooth or USB keyboard:** typing goes straight into the search box; Enter searches, Backspace deletes. After the first key, the on-screen keyboard steps aside so more saved articles fit; tapping the search box brings it back.
+- **A phone keypad (Light Flip):** the digit keys type letters by multi-tap, as on older phones: press 2 once for "a", twice for "b"; pause (or press another key) to move on; hold a key for its digit; 0 is a space and 1 is punctuation.
+
+`HardwareTyping` (in `SearchInput.kt`) handles all hardware keys. It takes typing keys before Light's on-screen keyboard sees them, so nothing is typed twice, and leaves every other key (volume, the Light Phone III's buttons) to LightOS.
+
+**The Light Flip isn't out yet,** and Light hasn't said how its keypad reaches tools. Wiki assumes what Android phones with keypads do: the keypad reports itself as a 12-key keypad and sends digits. If LightOS turns presses into letters itself instead, Wiki types those like any other keyboard. Its multi-tap code only runs for 12-key keypads, so nothing else is affected. When Light publishes Flip support (or a Flip emulator), check this, and whether the Flip has a touchscreen: without one, results and links would need the keypad's arrow keys too.
 
 ## Attribution and Wikipedia's rules
 

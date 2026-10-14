@@ -88,6 +88,18 @@ fun readingStyle(): TextStyle = scaled(LightThemeTokens.typography.paragraph, li
 @Composable
 fun noteStyle(): TextStyle = scaled(LightThemeTokens.typography.detail, lineHeightMultiplier = 1.45f)
 
+/** One of Light's text styles, scaled to the screen exactly as LightText does. */
+@Composable
+fun lightStyle(base: TextStyle): TextStyle = base.copy(
+    fontSize = base.fontSize.value.designVerticalPxToSp(),
+    lineHeight = if (base.lineHeight.isSpecified) base.lineHeight.value.designVerticalPxToSp() else base.lineHeight,
+    letterSpacing = if (base.letterSpacing.isSpecified) {
+        base.letterSpacing.value.designVerticalPxToSp()
+    } else {
+        base.letterSpacing
+    },
+)
+
 /** Light's type sizes are in "design pixels" and need scaling to the screen, like LightText does. */
 @Composable
 private fun scaled(base: TextStyle, lineHeightMultiplier: Float): TextStyle = base.copy(

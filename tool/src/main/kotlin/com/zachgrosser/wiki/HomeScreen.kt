@@ -1,5 +1,7 @@
 package com.zachgrosser.wiki
 
+import android.view.KeyEvent
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -10,34 +12,55 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.thelightphone.lp3Keyboard.ui.KeyboardOptions
+import com.thelightphone.lp3Keyboard.ui.LayoutOptions
+import com.thelightphone.lp3Keyboard.ui.viewmodel.EnQwertyLp3KeyboardViewModel
+import com.thelightphone.lp3Keyboard.ui.viewmodel.Lp3KeyboardViewModel
 import com.thelightphone.sdk.InitialScreen
 import com.thelightphone.sdk.LightScreen
 import com.thelightphone.sdk.LightViewModel
 import com.thelightphone.sdk.SealedLightActivity
 import com.thelightphone.sdk.SimpleLightScreen
+import com.thelightphone.sdk.rememberKeyboardOptions
 import com.thelightphone.sdk.ui.LightBarButton
+import com.thelightphone.sdk.ui.LightBottomBar
 import com.thelightphone.sdk.ui.LightScrollView
 import com.thelightphone.sdk.ui.LightText
-import com.thelightphone.sdk.ui.LightTextField
 import com.thelightphone.sdk.ui.LightTextVariant
 import com.thelightphone.sdk.ui.LightTopBar
 import com.thelightphone.sdk.ui.LightTopBarCenter
+import com.thelightphone.sdk.ui.LocalHapticsEnabled
+import com.thelightphone.sdk.ui.defaultKeyboardOptions
 import com.thelightphone.sdk.ui.gridUnitsAsDp
 import com.thelightphone.sdk.ui.lightClickable
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
 private const val SPLASH_MILLIS = 2_500L
+private const val KEYBOARD_KEY = "wiki-search-keyboard"
 
 class HomeViewModel(private val saved: SavedArticles) : LightViewModel<Unit>() {
 
@@ -49,6 +72,27 @@ class HomeViewModel(private val saved: SavedArticles) : LightViewModel<Unit>() {
 
     private val _savedArticles = MutableStateFlow<List<SavedArticle>>(emptyList())
     val savedArticles: StateFlow<List<SavedArticle>> = _savedArticles
+
+    /** What's typed in the search box. It stays while results are open, so it's there on return. */
+    val query = TextFieldState()
+
+    /**
+     * True once someone types on a hardware keyboard or keypad. The on-screen keyboard then steps
+     * aside to leave more room, until the search box is tapped.
+     */
+    private val _usingHardwareKeyboard = MutableStateFlow(false)
+    val usingHardwareKeyboard: StateFlow<Boolean> = _usingHardwareKeyboard
+
+    private val _searches = Channel<String>(Channel.CONFLATED)
+
+    /** Searches to run, one per submit. */
+    val searches: Flow<String> = _searches.receiveAsFlow()
+
+    private val hardwareTyping = HardwareTyping(
+        state = query,
+        onSearch = ::search,
+        onTyped = { _usingHardwareKeyboard.value = true },
+    )
 
     init {
         viewModelScope.launch {
@@ -62,6 +106,30 @@ class HomeViewModel(private val saved: SavedArticles) : LightViewModel<Unit>() {
         // Something may have been saved or removed while another screen was open.
         viewModelScope.launch { _savedArticles.value = saved.list() }
     }
+
+    fun search() {
+        val text = query.text.toString().trim()
+        if (text.isNotEmpty()) _searches.trySend(text)
+    }
+
+    fun showOnScreenKeyboard() {
+        _usingHardwareKeyboard.value = false
+    }
+
+    /**
+     * A key on a hardware keyboard or keypad. Typing keys go into the search box, and also skip
+     * the start-up screen. Returns false for keys that aren't for typing, so LightOS can use them.
+     */
+    fun onHardwareKey(event: KeyEvent): Boolean {
+        if (_showAbout.value || !hardwareTyping.isTypingKey(event)) return false
+        _showSplash.value = false
+        return hardwareTyping.onKeyEvent(event)
+    }
+
+    // Keys that nothing on screen took (for example during the start-up screen) arrive here.
+    override fun onKeyDown(keyCode: Int, event: KeyEvent) = onHardwareKey(event)
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent) = onHardwareKey(event)
 
     fun dismissSplash() {
         _showSplash.value = false
@@ -93,19 +161,58 @@ class HomeScreen(sealedActivity: SealedLightActivity) :
 
     override fun createViewModel() = HomeViewModel(SavedArticles(lightContext.filesDir))
 
+    private val vibrator = sealedActivity.vibrator
+    private var hapticsEnabled = false
+    private val keyboardOptions = MutableStateFlow(defaultKeyboardOptions())
+
+    /** Light's on-screen keyboard. Kept with this screen, so it's cleaned up when the screen closes. */
+    private val keyboard: Lp3KeyboardViewModel<*> by lazy {
+        val factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                EnQwertyLp3KeyboardViewModel<Unit>(
+                    passedCallback = SearchKeyboardCallback(
+                        state = viewModel.query,
+                        onSearch = viewModel::search,
+                        onHaptic = { if (hapticsEnabled) vibrator.click() },
+                    ),
+                    optionsForLayout = { layout -> LayoutOptions(!layout.isRootLayout) },
+                    keyboardOptionsFlow = keyboardOptions,
+                ).apply { setCapsMode(true) } as T
+        }
+        ViewModelProvider(this, factory)[KEYBOARD_KEY, EnQwertyLp3KeyboardViewModel::class.java]
+    }
+
     @Composable
     override fun Content() {
         val showSplash by viewModel.showSplash.collectAsState()
         val showAbout by viewModel.showAbout.collectAsState()
         val savedArticles by viewModel.savedArticles.collectAsState()
+        val usingHardwareKeyboard by viewModel.usingHardwareKeyboard.collectAsState()
+
+        // The user's keyboard settings from LightOS (emoji, key animation and so on).
+        val options: KeyboardOptions by rememberKeyboardOptions().collectAsState()
+        val haptics = LocalHapticsEnabled.current
+        SideEffect {
+            keyboardOptions.value = options
+            hapticsEnabled = haptics
+        }
+
+        LaunchedEffect(Unit) {
+            viewModel.searches.collect { query -> navigateTo({ SearchScreen(it, query) }) }
+        }
 
         WikiTheme {
             when {
                 showSplash -> SplashContent(onContinue = viewModel::dismissSplash)
                 showAbout -> AboutContent(onBack = viewModel::closeAbout)
                 else -> HomeContent(
+                    query = viewModel.query,
                     savedArticles = savedArticles,
-                    onSearch = { navigateTo({ SearchScreen(it) }) },
+                    keyboard = if (usingHardwareKeyboard) null else keyboard,
+                    onSearch = viewModel::search,
+                    onTapSearchBox = viewModel::showOnScreenKeyboard,
+                    onHardwareKey = viewModel::onHardwareKey,
                     onOpenArticle = { title -> navigateTo({ ArticleScreen(it, title) }) },
                     onAbout = viewModel::openAbout,
                 )
@@ -147,37 +254,58 @@ internal fun SplashContent(onContinue: () -> Unit) {
     }
 }
 
+/**
+ * The search box, ready to type into, with saved articles below it and Light's on-screen
+ * [keyboard] at the bottom. With no [keyboard] (someone is typing on a hardware keyboard or
+ * keypad), the saved list gets the room and a search button sits at the bottom instead.
+ */
 @Composable
 internal fun HomeContent(
+    query: TextFieldState,
     savedArticles: List<SavedArticle>,
+    keyboard: Lp3KeyboardViewModel<*>?,
     onSearch: () -> Unit,
+    onTapSearchBox: () -> Unit,
+    onHardwareKey: (KeyEvent) -> Boolean,
     onOpenArticle: (String) -> Unit,
     onAbout: () -> Unit,
 ) {
     val unit = 1f.gridUnitsAsDp()
-    Column(modifier = Modifier.fillMaxSize()) {
-        LightTopBar(
-            center = LightTopBarCenter.Text("Wiki"),
-            rightButton = LightBarButton.Text("ABOUT", onClick = onAbout),
-        )
-        LightTextField(
-            label = "Search",
-            value = "",
-            placeholder = "Search Wikipedia",
-            onClick = onSearch,
+    val focus = remember { FocusRequester() }
+    val keyboardShown = keyboard != null
+
+    // Hardware keys reach the screen only while something on it has focus. Light's keyboard takes
+    // focus when it appears; this takes it whenever the keyboard goes away.
+    LaunchedEffect(keyboardShown) { focus.requestFocus() }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            // "Preview" sees each key before Light's keyboard does, so typing on a hardware
+            // keyboard goes through HardwareTyping whether or not the on-screen keyboard is up.
+            .onPreviewKeyEvent { onHardwareKey(it.nativeKeyEvent) }
+            .focusRequester(focus)
+            .focusable(),
+    ) {
+        LightTopBar(rightButton = LightBarButton.Text("ABOUT", onClick = onAbout))
+        SearchBox(
+            state = query,
+            onTap = onTapSearchBox,
             modifier = Modifier.padding(horizontal = unit),
         )
         LightText(
             text = "Saved",
             variant = LightTextVariant.Detail,
             lighten = true,
-            modifier = Modifier.padding(start = unit, top = unit * 2f, bottom = unit * 0.5f),
+            modifier = Modifier.padding(start = unit, top = unit * 1.25f, bottom = unit * 0.25f),
         )
         if (savedArticles.isEmpty()) {
             LightText(
                 text = "Tap the star on an article to keep it here for reading offline.",
                 variant = LightTextVariant.Detail,
-                modifier = Modifier.padding(horizontal = unit),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = unit),
             )
         } else {
             LightScrollView(
@@ -191,15 +319,31 @@ internal fun HomeContent(
                         modifier = Modifier
                             .fillMaxWidth()
                             .lightClickable { onOpenArticle(article.title) }
-                            .padding(vertical = unit * 0.5f),
+                            .padding(vertical = unit * 0.4f),
                     ) {
-                        LightText(text = article.title, variant = LightTextVariant.Copy)
-                        article.description?.let {
-                            LightText(text = it, variant = LightTextVariant.Detail, lighten = true)
+                        LightText(
+                            text = article.title,
+                            variant = LightTextVariant.Copy,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        // With the keyboard up there's only room for titles.
+                        if (!keyboardShown) {
+                            article.description?.let {
+                                LightText(text = it, variant = LightTextVariant.Detail, lighten = true)
+                            }
                         }
                     }
                 }
             }
+        }
+        if (keyboard != null) {
+            SearchKeyboard(keyboard, onSearch)
+        } else {
+            LightBottomBar(
+                items = listOf(searchButton(onSearch)),
+                modifier = Modifier.padding(bottom = unit),
+            )
         }
     }
 }
