@@ -106,7 +106,7 @@ setup_tools() {
 pick_avd() {
   local wanted="${1:-}" avds count
   avds="$("$EMULATOR" -list-avds 2>/dev/null | grep -v '^INFO' || true)"
-  [ -n "$avds" ] || fail "There's no virtual phone yet. Create one in Android Studio's Device Manager first (see .github/README.md)."
+  [ -n "$avds" ] || fail "There's no virtual phone yet. Create one in Android Studio's Device Manager first (see DEVELOPING.md)."
   if [ -n "$wanted" ]; then
     printf '%s\n' "$avds" | grep -x "$wanted" >/dev/null || fail "No virtual phone called '$wanted'. You have: $(printf '%s' "$avds" | tr '\n' ' ')"
     AVD="$wanted"
@@ -222,7 +222,7 @@ become_root() {
   local out
   out="$("$ADB" root 2>&1 || true)"
   if printf '%s' "$out" | grep -i "production builds" >/dev/null; then
-    fail "This virtual phone uses a Google Play system image, which LightOS can't run on. Create one with the API 34 'Android Open Source' image (ARM 64 v8a) instead (see .github/README.md)."
+    fail "This virtual phone uses a Google Play system image, which LightOS can't run on. Create one with the API 34 'Android Open Source' image (ARM 64 v8a) instead (see DEVELOPING.md)."
   fi
   # adbd restarts as root; give it a moment to come back.
   sleep 3
@@ -253,7 +253,7 @@ check_test_keys() {
   description="$("$ADB" shell getprop ro.build.description | tr -d '\r')"
   case "$description" in
     *test-keys) ;;
-    *) fail "This system image is signed with '${description##* }', but LightOS's emulator needs one built with test-keys. Create a virtual phone with the API 34 'Android Open Source' image (ARM 64 v8a) instead (see .github/README.md)." ;;
+    *) fail "This system image is signed with '${description##* }', but LightOS's emulator needs one built with test-keys. Create a virtual phone with the API 34 'Android Open Source' image (ARM 64 v8a) instead (see DEVELOPING.md)." ;;
   esac
 }
 
