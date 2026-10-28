@@ -24,7 +24,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.hapticfeedback.HapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.ViewModel
@@ -161,7 +164,9 @@ class HomeScreen(sealedActivity: SealedLightActivity) :
 
     override fun createViewModel() = HomeViewModel(SavedArticles(lightContext.filesDir))
 
-    private val vibrator = sealedActivity.vibrator
+    // Compose's haptics rather than sealedActivity.vibrator: Light's build server compiles against
+    // an older SDK (v0.2.0) that doesn't have the vibrator yet.
+    private var haptics: HapticFeedback? = null
     private var hapticsEnabled = false
     private val keyboardOptions = MutableStateFlow(defaultKeyboardOptions())
 
@@ -174,7 +179,7 @@ class HomeScreen(sealedActivity: SealedLightActivity) :
                     passedCallback = SearchKeyboardCallback(
                         state = viewModel.query,
                         onSearch = viewModel::search,
-                        onHaptic = { if (hapticsEnabled) vibrator.click() },
+                        onHaptic = { if (hapticsEnabled) haptics?.performHapticFeedback(HapticFeedbackType.KeyboardTap) },
                     ),
                     optionsForLayout = { layout -> LayoutOptions(!layout.isRootLayout) },
                     keyboardOptionsFlow = keyboardOptions,
@@ -192,10 +197,12 @@ class HomeScreen(sealedActivity: SealedLightActivity) :
 
         // The user's keyboard settings from LightOS (emoji, key animation and so on).
         val options: KeyboardOptions by rememberKeyboardOptions().collectAsState()
-        val haptics = LocalHapticsEnabled.current
+        val userHapticsEnabled = LocalHapticsEnabled.current
+        val hapticFeedback = LocalHapticFeedback.current
         SideEffect {
             keyboardOptions.value = options
-            hapticsEnabled = haptics
+            hapticsEnabled = userHapticsEnabled
+            haptics = hapticFeedback
         }
 
         LaunchedEffect(Unit) {
