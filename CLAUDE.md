@@ -40,8 +40,9 @@ Quickest layout check: the previews in `tool/src/main/kotlin/com/zachgrosser/wik
 ## Light's rules (the build fails, or Light rejects the tool, otherwise)
 
 - **Light's build server only takes** `tool/build.gradle.kts`, `tool/lighttool.toml` and `tool/src/main/{kotlin,java,res,assets}`, then runs `:tool:assembleRelease -DlightSdk.unsigned=true -DlightSdk.abiFilters=arm64-v8a`. Nothing else in the repo ships. See `builder/README.md`.
+- **The build server compiles against its own pinned SDK, not ours.** In October 2026 that was **v0.2.0**, older than the SDK merged here, and the first Wiki build failed on an API added later (`sealedActivity.vibrator`, from v0.2.1). Only use SDK APIs that exist in the server's version. To check, build `tool/` inside a `git worktree` of that tag (e.g. `v0.2.0`) with the command above.
 - **Never write an `AndroidManifest.xml`**, and don't set `applicationId`, `versionCode`, `versionName` or `namespace` in `build.gradle.kts`: the plugin generates them from `lighttool.toml`. No `buildscript {}`, `apply(...)`, `resolutionStrategy` or custom source dirs.
-- **Forbidden in tool code** (checked at build time; full list in `plugin/src/main/kotlin/com/thelightphone/plugin/LightSdkPlugin.kt`, `BLOCKED_IMPORTS` and `BLOCKED_CODE_PATTERNS`): `android.app.*`, `android.content.Context`/`Intent`, `LocalContext`, `LocalView`, `LocalLifecycleOwner`, `androidx.activity.*`, reflection (including any `.java.` chain), `getSystemService`, `startActivity`, casts to Activity/Context. Use the SDK instead: `navigateTo`/`goBack`, `lightContext.filesDir`, `sealedActivity.vibrator`, `LocalHapticsEnabled`.
+- **Forbidden in tool code** (checked at build time; full list in `plugin/src/main/kotlin/com/thelightphone/plugin/LightSdkPlugin.kt`, `BLOCKED_IMPORTS` and `BLOCKED_CODE_PATTERNS`): `android.app.*`, `android.content.Context`/`Intent`, `LocalContext`, `LocalView`, `LocalLifecycleOwner`, `androidx.activity.*`, reflection (including any `.java.` chain), `getSystemService`, `startActivity`, casts to Activity/Context. Use the SDK instead: `navigateTo`/`goBack`, `lightContext.filesDir`, `LocalHapticsEnabled`. For vibration, use Compose's `LocalHapticFeedback` (it works on every SDK version); `sealedActivity.vibrator` isn't on Light's build server yet.
 - **Dependencies** must be on Light's allow-list (`plugin/src/main/resources/com/thelightphone/plugin/allowed-dependencies.txt`). Only what `:sdk:client` exposes with `api` is on the compile classpath; for example `lifecycle-viewmodel-compose` isn't, so `HomeScreen` keeps the keyboard's view model with `ViewModelProvider(this, …)`.
 - **`tool/lighttool.toml`:** `id = "com.zachgrosser.wiki"` can never change once submitted. `serverPackage` must be `com.lightos` when committed. Raise `versionCode` by one for every build sent to Light.
 - Light's [TOOL_GUIDELINES.md](TOOL_GUIDELINES.md): intentional, private, no ads or tracking, open source, Light's design components.
@@ -57,7 +58,7 @@ Quickest layout check: the previews in `tool/src/main/kotlin/com/zachgrosser/wik
 
 ## Open questions
 
-- **Light Flip** (ships April 2027): Light hasn't published how its keypad reaches tools or whether it has a touchscreen. Wiki assumes a 12-key keypad that sends digits (multi-tap in `MultiTap.kt`). Without a touchscreen, results and links would need keypad navigation. Revisit when Light publishes Flip support.
+- **Light Flip** (ships April 2027): Light hasn't published how its keypad reaches tools or whether it has a touchscreen. Wiki assumes a 12-key keypad that sends digits (multi-tap in `MultiTap.kt`). Without a touchscreen, results and links would need keypad navigation. Light's on-screen keyboard (`LightEmbeddedLp3Keyboard`) is built for the Light Phone III's width: at 480×640 its right-hand keys are cut off. Revisit when Light publishes Flip support.
 - English Wikipedia only; images and tables are left out on purpose.
 
 ## Git and GitHub
