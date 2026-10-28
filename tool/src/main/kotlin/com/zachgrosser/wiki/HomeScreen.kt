@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
@@ -47,6 +46,8 @@ import com.thelightphone.sdk.SimpleLightScreen
 import com.thelightphone.sdk.rememberKeyboardOptions
 import com.thelightphone.sdk.ui.LightBarButton
 import com.thelightphone.sdk.ui.LightBottomBar
+import com.thelightphone.sdk.ui.LightIcon
+import com.thelightphone.sdk.ui.LightIcons
 import com.thelightphone.sdk.ui.LightScrollView
 import com.thelightphone.sdk.ui.LightText
 import com.thelightphone.sdk.ui.LightTextVariant
@@ -410,15 +411,7 @@ internal fun AboutContent(onBack: () -> Unit, onLanguage: () -> Unit) {
                 .padding(start = unit),
         ) {
             AboutSection(null, strings.aboutIntro)
-            LightText(
-                text = "${strings.language}: ${language.nativeName}",
-                variant = LightTextVariant.Copy,
-                underline = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .lightClickable(onClick = onLanguage)
-                    .padding(vertical = unit * 0.5f),
-            )
+            LanguageRow(language, onClick = onLanguage)
             AboutSection(
                 "Where articles come from",
                 "Every article is written by Wikipedia's volunteer contributors. Wiki downloads it " +
@@ -482,8 +475,31 @@ private fun AboutSection(title: String?, body: String) {
 }
 
 /**
+ * A settings row, like LightOS's own: "Language" with the current one below it, and Light's
+ * forward arrow to show that tapping opens a list.
+ */
+@Composable
+private fun LanguageRow(language: Language, onClick: () -> Unit) {
+    val unit = 1f.gridUnitsAsDp()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .lightClickable(onClick = onClick)
+            .padding(top = unit * 0.5f, bottom = unit * 0.5f, end = unit),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            LightText(text = strings().language, variant = LightTextVariant.Detail, lighten = true)
+            LightText(text = language.nativeName, variant = LightTextVariant.Copy)
+        }
+        LightIcon(LightIcons.ARROW_RIGHT, size = 1.5f, contentDescription = null)
+    }
+}
+
+/**
  * The languages Wiki can be used in, each in its own name with its English name underneath (so
- * anyone who picked one by accident can find their way back). A bullet marks the current one.
+ * anyone who picked one by accident can find their way back). Light's select icons mark the
+ * current one.
  */
 @Composable
 internal fun LanguagesContent(onBack: () -> Unit, onChoose: (Language) -> Unit) {
@@ -503,11 +519,13 @@ internal fun LanguagesContent(onBack: () -> Unit, onChoose: (Language) -> Unit) 
                         .fillMaxWidth()
                         .lightClickable { onChoose(language) }
                         .padding(vertical = unit * 0.4f),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    LightText(
-                        text = if (language == current) "•" else "",
-                        variant = LightTextVariant.Copy,
-                        modifier = Modifier.width(unit * 1.25f),
+                    LightIcon(
+                        if (language == current) LightIcons.SELECT_ON else LightIcons.SELECT_OFF,
+                        size = 1.25f,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = unit * 0.75f),
                     )
                     Column {
                         LightText(text = language.nativeName, variant = LightTextVariant.Copy)
