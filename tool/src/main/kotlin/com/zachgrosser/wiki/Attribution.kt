@@ -32,21 +32,21 @@ object Attribution {
             "the Wikimedia Foundation. Wiki is not endorsed by or affiliated with the Wikimedia Foundation."
 
     /** The article's address on Wikipedia, written out because the phone has no browser to link to. */
-    fun articleUrl(title: String): String {
+    fun articleUrl(title: String, language: Language = Language.English): String {
         val path = title.trim()
             .replace("%", "%25")
             .replace("?", "%3F")
             .replace(' ', '_')
-        return "$WIKI_HOST/wiki/$path"
+        return "${language.host}/wiki/$path"
     }
 
     /**
      * The credit shown at the end of every article and section. CC BY-SA 4.0 needs the authors
      * (a link to the article, whose history lists them), the license with a link to it, and a
-     * note that the text was changed.
+     * note that the text was changed. Always in English, whatever the article's language.
      */
-    fun forArticle(title: String) =
-        "From the Wikipedia article “$title” by its contributors: ${articleUrl(title)}\n" +
+    fun forArticle(title: String, language: Language = Language.English) =
+        "From the Wikipedia article “$title” by its contributors: ${articleUrl(title, language)}\n" +
             "Available under $LICENSE_SHORT: $LICENSE_URL\n" +
             "Changed for this screen: images, tables, citations and some formatting are left out."
 }

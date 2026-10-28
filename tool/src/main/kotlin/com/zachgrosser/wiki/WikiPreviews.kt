@@ -2,6 +2,7 @@ package com.zachgrosser.wiki
 
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.tooling.preview.Preview
 import com.thelightphone.lp3Keyboard.ui.LayoutOptions
@@ -97,7 +98,26 @@ private fun ArticleEndPreview() = WikiTheme {
 
 @LightDevicePreviews
 @Composable
-private fun AboutPreview() = WikiTheme { AboutContent(onBack = {}) }
+private fun AboutPreview() = WikiTheme { AboutContent(onBack = {}, onLanguage = {}) }
+
+@LightDevicePreviews
+@Composable
+private fun LanguagesPreview() = WikiTheme { LanguagesContent(onBack = {}, onChoose = {}) }
+
+/** German has some of the longest words, so it's the one to check for fit. Saved articles from other Wikipedias say which. */
+@LightDevicePreviews
+@Composable
+private fun HomeGermanPreview() = WikiTheme {
+    CompositionLocalProvider(LocalLanguage provides Language.German) {
+        HomePreview(query = "", saved = SAMPLE_SAVED, keyboardShown = true)
+    }
+}
+
+@LightDevicePreviews
+@Composable
+private fun AboutFrenchPreview() = WikiTheme {
+    CompositionLocalProvider(LocalLanguage provides Language.French) { AboutContent(onBack = {}, onLanguage = {}) }
+}
 
 @LightDevicePreviews
 @Composable
@@ -158,7 +178,7 @@ private val SAMPLE_ARTICLE = Article(
 
 private val SAMPLE_SAVED = listOf(
     SavedArticle("Light Phone III", 1, "Minimalist mobile phone"),
-    SavedArticle("Amsterdam", 2, "Capital of the Netherlands"),
+    SavedArticle("Amsterdam", 2, "Hoofdstad van Nederland", language = "nl"),
     SavedArticle("Photosynthesis", 3, "Process by which plants make food from light"),
 )
 

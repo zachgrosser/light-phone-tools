@@ -26,34 +26,38 @@ import kotlinx.coroutines.launch
 sealed interface SearchState {
     data object Searching : SearchState
     data class Results(val results: List<SearchResult>) : SearchState
-    data class Failed(val message: String) : SearchState
+    data class Failed(val error: Throwable) : SearchState
 }
 
-class SearchViewModel(query: String) : LightViewModel<Unit>() {
+class SearchViewModel(language: Language, query: String) : LightViewModel<Unit>() {
 
     private val _state = MutableStateFlow<SearchState>(SearchState.Searching)
     val state: StateFlow<SearchState> = _state
 
     init {
         viewModelScope.launch {
-            _state.value = WikiApi.search(query).fold(
+            _state.value = WikiApi.search(language, query).fold(
                 onSuccess = { SearchState.Results(it) },
-                onFailure = { SearchState.Failed(errorMessage(it)) },
+                onFailure = { SearchState.Failed(it) },
             )
         }
     }
 }
 
-/** Wikipedia's results for [query], typed on the home screen. Back returns there to change it. */
+/**
+ * Results for [query] from [language]'s Wikipedia, typed on the home screen. Back returns there
+ * to change it.
+ */
 class SearchScreen(
     sealedActivity: SealedLightActivity,
     private val query: String,
+    private val language: Language,
 ) : LightScreen<Unit, SearchViewModel>(sealedActivity) {
 
     override val viewModelClass: Class<SearchViewModel>
         get() = SearchViewModel::class.java
 
-    override fun createViewModel() = SearchViewModel(query)
+    override fun createViewModel() = SearchViewModel(language, query)
 
     @Composable
     override fun Content() {
@@ -61,13 +65,17 @@ class SearchScreen(
 
         WikiTheme {
             when (val current = state) {
-                SearchState.Searching -> MessageScreen(title = query, message = "Searching…", onBack = { goBack() })
-                is SearchState.Failed -> MessageScreen(title = query, message = current.message, onBack = { goBack() })
+                SearchState.Searching -> MessageScreen(title = query, message = strings().searching, onBack = { goBack() })
+                is SearchState.Failed -> MessageScreen(
+                    title = query,
+                    message = errorMessage(current.error, strings()),
+                    onBack = { goBack() },
+                )
                 is SearchState.Results -> ResultsContent(
                     query = query,
                     results = current.results,
                     onBack = { goBack() },
-                    onOpen = { title -> navigateTo({ ArticleScreen(it, title) }) },
+                    onOpen = { title -> navigateTo({ ArticleScreen(it, title, language) }) },
                 )
             }
         }
@@ -86,7 +94,7 @@ internal fun ResultsContent(
         LightTopBar(leftButton = backButton(onBack), center = LightTopBarCenter.Text(query))
         if (results.isEmpty()) {
             LightText(
-                text = "No articles found for “$query”.",
+                text = strings().noResults(query),
                 variant = LightTextVariant.Copy,
                 modifier = Modifier.padding(horizontal = unit, vertical = unit),
             )

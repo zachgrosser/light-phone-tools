@@ -5,12 +5,14 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
@@ -61,17 +63,25 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import java.io.File
 
 private const val SPLASH_MILLIS = 2_500L
 private const val KEYBOARD_KEY = "wiki-search-keyboard"
 
-class HomeViewModel(private val saved: SavedArticles) : LightViewModel<Unit>() {
+class HomeViewModel(
+    private val saved: SavedArticles,
+    private val filesDir: File,
+) : LightViewModel<Unit>() {
 
     private val _showSplash = MutableStateFlow(true)
     val showSplash: StateFlow<Boolean> = _showSplash
 
     private val _showAbout = MutableStateFlow(false)
     val showAbout: StateFlow<Boolean> = _showAbout
+
+    /** The list of languages, opened from About. */
+    private val _showLanguages = MutableStateFlow(false)
+    val showLanguages: StateFlow<Boolean> = _showLanguages
 
     private val _savedArticles = MutableStateFlow<List<SavedArticle>>(emptyList())
     val savedArticles: StateFlow<List<SavedArticle>> = _savedArticles
@@ -98,6 +108,8 @@ class HomeViewModel(private val saved: SavedArticles) : LightViewModel<Unit>() {
     )
 
     init {
+        // Read during the start-up screen, which is in English whatever the language.
+        viewModelScope.launch { LanguageSetting.load(filesDir) }
         viewModelScope.launch {
             delay(SPLASH_MILLIS)
             _showSplash.value = false
@@ -146,7 +158,25 @@ class HomeViewModel(private val saved: SavedArticles) : LightViewModel<Unit>() {
         _showAbout.value = false
     }
 
+    fun openLanguages() {
+        _showLanguages.value = true
+    }
+
+    fun closeLanguages() {
+        _showLanguages.value = false
+    }
+
+    /** Switches Wiki's text and the Wikipedia it searches, then goes back to About, now in that language. */
+    fun chooseLanguage(language: Language) {
+        viewModelScope.launch { LanguageSetting.choose(filesDir, language) }
+        closeLanguages()
+    }
+
     override fun onBackPressed(): Boolean {
+        if (_showLanguages.value) {
+            closeLanguages()
+            return true
+        }
         if (_showAbout.value) {
             closeAbout()
             return true
@@ -162,7 +192,7 @@ class HomeScreen(sealedActivity: SealedLightActivity) :
     override val viewModelClass: Class<HomeViewModel>
         get() = HomeViewModel::class.java
 
-    override fun createViewModel() = HomeViewModel(SavedArticles(lightContext.filesDir))
+    override fun createViewModel() = HomeViewModel(SavedArticles(lightContext.filesDir), lightContext.filesDir)
 
     // Compose's haptics rather than sealedActivity.vibrator: Light's build server compiles against
     // an older SDK (v0.2.0) that doesn't have the vibrator yet.
@@ -192,6 +222,7 @@ class HomeScreen(sealedActivity: SealedLightActivity) :
     override fun Content() {
         val showSplash by viewModel.showSplash.collectAsState()
         val showAbout by viewModel.showAbout.collectAsState()
+        val showLanguages by viewModel.showLanguages.collectAsState()
         val savedArticles by viewModel.savedArticles.collectAsState()
         val usingHardwareKeyboard by viewModel.usingHardwareKeyboard.collectAsState()
 
@@ -206,13 +237,14 @@ class HomeScreen(sealedActivity: SealedLightActivity) :
         }
 
         LaunchedEffect(Unit) {
-            viewModel.searches.collect { query -> navigateTo({ SearchScreen(it, query) }) }
+            viewModel.searches.collect { query -> navigateTo({ SearchScreen(it, query, LanguageSetting.current.value) }) }
         }
 
         WikiTheme {
             when {
                 showSplash -> SplashContent(onContinue = viewModel::dismissSplash)
-                showAbout -> AboutContent(onBack = viewModel::closeAbout)
+                showLanguages -> LanguagesContent(onBack = viewModel::closeLanguages, onChoose = viewModel::chooseLanguage)
+                showAbout -> AboutContent(onBack = viewModel::closeAbout, onLanguage = viewModel::openLanguages)
                 else -> HomeContent(
                     query = viewModel.query,
                     savedArticles = savedArticles,
@@ -220,7 +252,9 @@ class HomeScreen(sealedActivity: SealedLightActivity) :
                     onSearch = viewModel::search,
                     onTapSearchBox = viewModel::showOnScreenKeyboard,
                     onHardwareKey = viewModel::onHardwareKey,
-                    onOpenArticle = { title -> navigateTo({ ArticleScreen(it, title) }) },
+                    onOpenArticle = { saved ->
+                        navigateTo({ ArticleScreen(it, saved.title, Language.fromCode(saved.language)) })
+                    },
                     onAbout = viewModel::openAbout,
                 )
             }
@@ -274,10 +308,12 @@ internal fun HomeContent(
     onSearch: () -> Unit,
     onTapSearchBox: () -> Unit,
     onHardwareKey: (KeyEvent) -> Boolean,
-    onOpenArticle: (String) -> Unit,
+    onOpenArticle: (SavedArticle) -> Unit,
     onAbout: () -> Unit,
 ) {
     val unit = 1f.gridUnitsAsDp()
+    val strings = strings()
+    val language = LocalLanguage.current
     val focus = remember { FocusRequester() }
     val keyboardShown = keyboard != null
 
@@ -294,21 +330,21 @@ internal fun HomeContent(
             .focusRequester(focus)
             .focusable(),
     ) {
-        LightTopBar(rightButton = LightBarButton.Text("ABOUT", onClick = onAbout))
+        LightTopBar(rightButton = LightBarButton.Text(strings.aboutButton, onClick = onAbout))
         SearchBox(
             state = query,
             onTap = onTapSearchBox,
             modifier = Modifier.padding(horizontal = unit),
         )
         LightText(
-            text = "Saved",
+            text = strings.saved,
             variant = LightTextVariant.Detail,
             lighten = true,
             modifier = Modifier.padding(start = unit, top = unit * 1.25f, bottom = unit * 0.25f),
         )
         if (savedArticles.isEmpty()) {
             LightText(
-                text = "Tap the star on an article to keep it here for reading offline.",
+                text = strings.savedHint,
                 variant = LightTextVariant.Detail,
                 modifier = Modifier
                     .weight(1f)
@@ -325,11 +361,12 @@ internal fun HomeContent(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .lightClickable { onOpenArticle(article.title) }
+                            .lightClickable { onOpenArticle(article) }
                             .padding(vertical = unit * 0.4f),
                     ) {
                         LightText(
-                            text = article.title,
+                            // Articles from another language's Wikipedia say which, as in "Berlin (de)".
+                            text = if (article.language == language.code) article.title else "${article.title} (${article.language})",
                             variant = LightTextVariant.Copy,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -355,26 +392,37 @@ internal fun HomeContent(
     }
 }
 
+/**
+ * What Wiki is, the language setting, and every credit and policy. Only the intro and the
+ * language setting are translated; the rest stays in English (see Language).
+ */
 @Composable
-internal fun AboutContent(onBack: () -> Unit) {
+internal fun AboutContent(onBack: () -> Unit, onLanguage: () -> Unit) {
     val unit = 1f.gridUnitsAsDp()
+    val strings = strings()
+    val language = LocalLanguage.current
     Column(modifier = Modifier.fillMaxSize()) {
-        LightTopBar(leftButton = backButton(onBack), center = LightTopBarCenter.Text("About"))
+        LightTopBar(leftButton = backButton(onBack), center = LightTopBarCenter.Text(strings.about))
         LightScrollView(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
                 .padding(start = unit),
         ) {
-            AboutSection(
-                null,
-                "Wiki lets you search and read Wikipedia on your Light Phone. Read an article a " +
-                    "section at a time, follow its links, and star it to read it offline.",
+            AboutSection(null, strings.aboutIntro)
+            LightText(
+                text = "${strings.language}: ${language.nativeName}",
+                variant = LightTextVariant.Copy,
+                underline = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .lightClickable(onClick = onLanguage)
+                    .padding(vertical = unit * 0.5f),
             )
             AboutSection(
                 "Where articles come from",
                 "Every article is written by Wikipedia's volunteer contributors. Wiki downloads it " +
-                    "from Wikipedia ($WIKI_HOST), which is run by the Wikimedia Foundation, when you open it.\n\n" +
+                    "from Wikipedia (${language.host}), which is run by the Wikimedia Foundation, when you open it.\n\n" +
                     "To fit this screen, Wiki leaves out images, tables, infoboxes, citations and some " +
                     "formatting, and only links to other articles. The end of each article gives its " +
                     "address on Wikipedia, where you can see the full version and everyone who wrote it.",
@@ -431,4 +479,44 @@ private fun AboutSection(title: String?, body: String) {
         variant = LightTextVariant.Paragraph,
         modifier = Modifier.padding(bottom = unit * 0.5f),
     )
+}
+
+/**
+ * The languages Wiki can be used in, each in its own name with its English name underneath (so
+ * anyone who picked one by accident can find their way back). A bullet marks the current one.
+ */
+@Composable
+internal fun LanguagesContent(onBack: () -> Unit, onChoose: (Language) -> Unit) {
+    val unit = 1f.gridUnitsAsDp()
+    val current = LocalLanguage.current
+    Column(modifier = Modifier.fillMaxSize()) {
+        LightTopBar(leftButton = backButton(onBack), center = LightTopBarCenter.Text(strings().language))
+        LightScrollView(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(start = unit),
+        ) {
+            Language.entries.forEach { language ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .lightClickable { onChoose(language) }
+                        .padding(vertical = unit * 0.4f),
+                ) {
+                    LightText(
+                        text = if (language == current) "•" else "",
+                        variant = LightTextVariant.Copy,
+                        modifier = Modifier.width(unit * 1.25f),
+                    )
+                    Column {
+                        LightText(text = language.nativeName, variant = LightTextVariant.Copy)
+                        if (language.englishName != language.nativeName) {
+                            LightText(text = language.englishName, variant = LightTextVariant.Detail, lighten = true)
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

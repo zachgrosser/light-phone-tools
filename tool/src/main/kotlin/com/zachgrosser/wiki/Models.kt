@@ -20,6 +20,8 @@ data class Article(
      * otherwise leaves out, and its terms of use ask reusers to keep them.
      */
     val notices: List<Block> = emptyList(),
+    /** Which Wikipedia it came from ([Language.code]). Articles saved before 1.1 are English. */
+    val language: String = Language.English.code,
 )
 
 @Serializable
@@ -66,6 +68,8 @@ data class SavedArticle(
     val description: String? = null,
     val aliases: List<String> = emptyList(),
     val savedAtMillis: Long = 0,
+    /** [Language.code]. Page ids are only unique within one Wikipedia. */
+    val language: String = Language.English.code,
 )
 
 /** One row in the search results. */

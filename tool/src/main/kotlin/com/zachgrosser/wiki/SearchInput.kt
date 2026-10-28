@@ -50,13 +50,13 @@ import com.thelightphone.sdk.ui.keyboard.LightEmbeddedLp3Keyboard
 //  - a hardware keyboard, such as a Bluetooth or USB one (HardwareTyping)
 //  - a phone keypad that sends digits, like the Light Flip's (HardwareTyping + MultiTap)
 
-private const val PLACEHOLDER = "Search Wikipedia"
 private const val UNDERLINE_THICKNESS_PX = 3f
 
+@Composable
 fun searchButton(onSearch: () -> Unit) = LightBarButton.LightIcon(
     icon = LightIcons.SEARCH,
     onClick = onSearch,
-    contentDescription = "Search",
+    contentDescription = strings().search,
 )
 
 /**
@@ -109,7 +109,7 @@ internal fun SearchBox(state: TextFieldState, onTap: () -> Unit, modifier: Modif
         ) {
             Box(modifier = Modifier.horizontalScroll(scroll, enabled = false)) {
                 BasicText(
-                    text = if (isEmpty) PLACEHOLDER else state.text.toString(),
+                    text = if (isEmpty) strings().searchPlaceholder else state.text.toString(),
                     style = style.copy(color = if (isEmpty) colors.contentSecondary else colors.content),
                     maxLines = 1,
                     softWrap = false,

@@ -41,7 +41,7 @@ class SectionScreen(
                 index = index,
                 onBack = { goBack() },
                 onNext = { index += 1 },
-                onOpenArticle = { target -> navigateTo({ ArticleScreen(it, target) }) },
+                onOpenArticle = { target -> navigateTo({ ArticleScreen(it, target, Language.fromCode(article.language)) }) },
             )
         }
     }
@@ -80,7 +80,7 @@ internal fun SectionContent(
                 ArticleBlocks(section.blocks, onOpenArticle)
                 if (next != null) {
                     LightText(
-                        text = "Next: ${next.title}",
+                        text = strings().next(next.title),
                         variant = LightTextVariant.Copy,
                         underline = true,
                         modifier = Modifier

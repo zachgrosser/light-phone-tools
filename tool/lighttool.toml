@@ -1,8 +1,8 @@
 [tool]
 id = "com.zachgrosser.wiki"
 label = "Wiki"
-versionCode = 1
-versionName = "1.0.0"
+versionCode = 2
+versionName = "1.1.0"
 permissions = ["android.permission.INTERNET"]
 capabilities = []
 # No orientation lock: on the Light Phone III's near-square screen, Android shrinks

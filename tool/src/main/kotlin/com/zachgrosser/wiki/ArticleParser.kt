@@ -11,13 +11,24 @@ import java.io.ByteArrayOutputStream
  */
 object ArticleParser {
 
-    fun parse(title: String, pageId: Long, revisionId: Long, html: String): Article {
-        val builder = ArticleBuilder()
+    fun parse(
+        title: String,
+        pageId: Long,
+        revisionId: Long,
+        html: String,
+        language: Language = Language.English,
+    ): Article {
+        val builder = ArticleBuilder(language)
         HtmlTokenizer(html).tokenize(builder)
         return builder.build(title, pageId, revisionId)
     }
 
-    /** Sections that are mostly citations or outbound links, which aren't useful here. */
+    /**
+     * Sections that are mostly citations or outbound links, which aren't useful here. English
+     * Wikipedia only: other languages keep these sections, because the credit notices that must
+     * be kept from them ([ATTRIBUTION_NOTICE]) are only recognised in English. Their citation
+     * lists still go, by their HTML class, which is the same in every language.
+     */
     internal val DROPPED_SECTIONS = setOf(
         "references", "notes", "footnotes", "citations", "sources", "bibliography",
         "external links", "further reading", "works cited", "cited sources",
@@ -39,13 +50,16 @@ object ArticleParser {
     internal val ATTRIBUTION_NOTICE = Regex("""\bincorporates\b[^.]*\b(text|material)\b""", RegexOption.IGNORE_CASE)
 
     /** Returns the article title an internal link points to, or null for anything else. */
-    fun linkTarget(href: String?): String? {
+    fun linkTarget(href: String?, language: Language = Language.English): String? {
         if (href == null || !href.startsWith("/wiki/")) return null
         val raw = href.substring("/wiki/".length).substringBefore('#').substringBefore('?')
         val title = percentDecode(raw).replace('_', ' ').trim()
         if (title.isEmpty()) return null
         val colon = title.indexOf(':')
-        if (colon > 0 && title.substring(0, colon).trim().lowercase() in NAMESPACES) return null
+        if (colon > 0) {
+            val prefix = title.substring(0, colon).trim().lowercase()
+            if (prefix in NAMESPACES || prefix in language.namespaces) return null
+        }
         return title
     }
 
@@ -243,7 +257,7 @@ internal class HtmlTokenizer(private val html: String) {
 }
 
 /** Walks the tokens and collects blocks, sections, links and styles. */
-private class ArticleBuilder : HtmlHandler {
+private class ArticleBuilder(private val language: Language) : HtmlHandler {
 
     private enum class Role {
         Paragraph, ListItem, List, DefinitionList, Indent, Term, Quote, Note, Heading,
@@ -331,7 +345,7 @@ private class ArticleBuilder : HtmlHandler {
             "dt" -> Frame(name, Role.Term, span = SpanKind.Bold)
             "blockquote" -> Frame(name, Role.Quote)
             "h1", "h2", "h3", "h4", "h5", "h6" -> Frame(name, Role.Heading, headingLevel = name[1] - '0')
-            "a" -> Frame(name, Role.Inline, span = SpanKind.Link, linkTarget = ArticleParser.linkTarget(attributes["href"]))
+            "a" -> Frame(name, Role.Inline, span = SpanKind.Link, linkTarget = ArticleParser.linkTarget(attributes["href"], language))
             "b", "strong" -> Frame(name, Role.Inline, span = SpanKind.Bold)
             "i", "em" -> Frame(name, Role.Inline, span = SpanKind.Italic)
             in BLOCK_CONTAINERS -> {
@@ -495,7 +509,7 @@ private class ArticleBuilder : HtmlHandler {
             droppedLevel = null
         }
         if (title.isEmpty()) return
-        if (title.lowercase() in ArticleParser.DROPPED_SECTIONS) {
+        if (language == Language.English && title.lowercase() in ArticleParser.DROPPED_SECTIONS) {
             droppedLevel = level
             return
         }
@@ -512,6 +526,7 @@ private class ArticleBuilder : HtmlHandler {
         flushBlock()
         return Article(
             title = title,
+            language = language.code,
             pageId = pageId,
             revisionId = revisionId,
             description = description.toString().trim().ifEmpty { null },
@@ -540,7 +555,7 @@ private class ArticleBuilder : HtmlHandler {
 
     private fun shouldSkip(name: String, classes: Set<String>, attributes: Map<String, String>): Boolean {
         if (name in SKIPPED_ELEMENTS) return true
-        if (classes.any { it in SKIPPED_CLASSES }) return true
+        if (classes.any { it in SKIPPED_CLASSES || it in OTHER_WIKIS_SKIPPED_CLASSES || it.startsWith("normdaten") }) return true
         if (attributes["id"] == "coordinates") return true
         if (attributes["role"] == "navigation") return true
         val style = attributes["style"]?.replace(" ", "")?.lowercase().orEmpty()
@@ -578,6 +593,20 @@ private class ArticleBuilder : HtmlHandler {
             "mw-editsection", "mw-cite-backlink", "authority-control", "portalbox",
             "clade-gallery", "haudio", "spoken-wikipedia", "mw-ext-cite-error", "catlinks",
             "printfooter", "mw-jump-link", "navigation-only", "Z3988",
+        )
+
+        /**
+         * The same kinds of boxes on the other Wikipedias Wiki can read, which name them their
+         * own way: navigation boxes (de "navileiste", pt "navigation-box"), portal and sister
+         * project links (fr "bandeau-portail", sv "interProject") and authority control
+         * (de "normdaten-…", es "mw-authority-control"). None of these appear on English Wikipedia.
+         */
+        private val OTHER_WIKIS_SKIPPED_CLASSES = setOf(
+            "navileiste", "klappleiste", "BoxenVerschmelzen",
+            "navbox-container", "bandeau-portail", "boite-grise",
+            "mw-authority-control", "mw-mf-linked-projects",
+            "navigation-box",
+            "interProject",
         )
 
         private val LATEX_SYMBOLS = mapOf(

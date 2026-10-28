@@ -54,12 +54,14 @@ Quickest layout check: the previews in `tool/src/main/kotlin/com/zachgrosser/wik
 - **`ArticleParser.kt`:** drops reference sections but keeps "This article incorporates text from…" notices (required). Run `ArticleParserTest` after any change.
 - **Typing (`SearchInput.kt`, `MultiTap.kt`):** Light's on-screen keyboard types on key *release*; `HardwareTyping` intercepts hardware typing keys in `onPreviewKeyEvent` and must claim both key down and key up, or characters arrive twice. Non-typing keys (volume, the Light Phone III's wheel and shutter) must return `false` so LightOS gets them. `lightOsRemap` undoes LightOS's remapping of external keyboards.
 - **Screen sizes:** no orientation lock (Android letterboxes portrait-locked apps on the near-square Light Phone III screen). Size things with the SDK's `gridUnitsAsDp()` and `designVerticalPxToSp()`, and check both sizes in `WikiPreviews.kt`.
+- **Languages (`Language.kt`, `LanguageSetting.kt`):** one setting changes Wiki's text and the Wikipedia it uses. Every article, saved entry, search and link carries its language; saved English articles keep their old file names (`<pageId>.json`; others are `<lang>-<pageId>.json`). Credits and About's legal text stay in English on purpose. Only Latin-alphabet languages, because Light's keyboard has no other layouts. Add text to `UiStrings` for every language at once (`LanguageTest` checks none is blank). On non-English Wikipedias `ArticleParser` keeps reference sections, because it only recognises imported-text notices in English. Each Wikipedia names its navigation boxes differently (`OTHER_WIKIS_SKIPPED_CLASSES`).
 - **Unit tests run on the JVM without Android.** Keep logic that needs testing free of `android.*` classes (as `MultiTap` and `ArticleParser` are).
 
 ## Open questions
 
 - **Light Flip** (ships April 2027): Light hasn't published how its keypad reaches tools or whether it has a touchscreen. Wiki assumes a 12-key keypad that sends digits (multi-tap in `MultiTap.kt`). Without a touchscreen, results and links would need keypad navigation. Light's on-screen keyboard (`LightEmbeddedLp3Keyboard`) is built for the Light Phone III's width: at 480×640 its right-hand keys are cut off. Revisit when Light publishes Flip support.
-- English Wikipedia only; images and tables are left out on purpose.
+- English is the default; Spanish, French, German, Italian, Portuguese, Dutch and Swedish are offered (since 1.1). Their translations haven't had a native speaker's review. Images and tables are left out on purpose.
+- **Android's Back button skips `onBackPressed`** in Light's SDK (`LightActivity` calls its own `goBack()`, not the screen's), so system Back on About or the language list leaves Wiki instead of going back a step. The top bar's back arrow works. Tools can't use `BackHandler` (`androidx.activity` is blocked), so this needs fixing in the SDK.
 
 ## Git and GitHub
 

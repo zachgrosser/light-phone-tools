@@ -9,8 +9,9 @@ A Light Phone tool for searching and reading Wikipedia. Settings are in [`lightt
 - **Read**: the intro, then a contents list; each section opens on its own screen with a "Next" link. Links to other articles are tappable; images, tables, infoboxes and citations are left out.
 - **Save** with the star to read offline. Saved articles open from the phone first, with or without a connection.
 - **About** explains the source, license, accuracy, privacy, trademark and how to give feedback.
+- **Language**, under About: English (the default), Español, Français, Deutsch, Italiano, Português, Nederlands or Svenska. See [Languages](#languages).
 
-Wiki only needs the `INTERNET` permission. It has no ads, analytics or tracking, and talks only to `en.wikipedia.org`.
+Wiki only needs the `INTERNET` permission. It has no ads, analytics or tracking, and talks only to Wikipedia: `en.wikipedia.org`, or the chosen language's (`de.wikipedia.org` and so on).
 
 ## How it works
 
@@ -26,11 +27,13 @@ Wiki only needs the `INTERNET` permission. It has no ads, analytics or tracking,
 | `ArticleParser.kt` | Turns Wikipedia's HTML into plain-text blocks with links, bold and italics |
 | `SavedArticles.kt` | Saves articles as JSON files in the tool's private storage |
 | `Attribution.kt` | Every credit, license, trademark and privacy line the tool shows |
+| `Language.kt` | The languages, their Wikipedias, and Wiki's own text in each |
+| `LanguageSetting.kt` | Remembers the chosen language (`language.txt` in private storage) and provides it to every screen |
 | `Models.kt` | The data: articles, sections, blocks, search results |
 | `WikiUi.kt` | Shared look: theme, text styles, article blocks, credits |
 | `WikiPreviews.kt` | Android Studio previews of every screen at Light Phone III and Light Flip sizes |
 
-`ArticleParser` is the part most likely to need care. It keeps paragraphs, headings, lists, quotes and "Main article:" notes. It skips anything that doesn't suit a small text-only screen: images, tables, infoboxes, navigation boxes and citation markers. It also leaves out the reference sections (References, Notes, Sources, External links and so on), but keeps any credit notice found there for imported text (see below). Formulas become readable text, and superscript and subscript numbers become ² and ₂. Its tests use a real section of the "Light Phone" article plus a made-up page full of edge cases.
+`ArticleParser` is the part most likely to need care. It keeps paragraphs, headings, lists, quotes and "Main article:" notes. It skips anything that doesn't suit a small text-only screen: images, tables, infoboxes, navigation boxes and citation markers. On English Wikipedia it also leaves out the reference sections (References, Notes, Sources, External links and so on), but keeps any credit notice found there for imported text (see below). Other languages keep those sections (see [Languages](#languages)); their citation lists and navigation boxes still go, by HTML class. Formulas become readable text, and superscript and subscript numbers become ² and ₂. Its tests use a real section of the "Light Phone" article plus a made-up page full of edge cases.
 
 ## Keyboards
 
@@ -43,6 +46,16 @@ The home screen is ready to type into as soon as it appears, whichever way the p
 `HardwareTyping` (in `SearchInput.kt`) handles all hardware keys. It takes typing keys before Light's on-screen keyboard sees them, so nothing is typed twice, and leaves every other key (volume, the Light Phone III's buttons) to LightOS.
 
 **The Light Flip isn't out yet,** and Light hasn't said how its keypad reaches tools. Wiki assumes what Android phones with keypads do: the keypad reports itself as a 12-key keypad and sends digits. If LightOS turns presses into letters itself instead, Wiki types those like any other keyboard. Its multi-tap code only runs for 12-key keypads, so nothing else is affected. When Light publishes Flip support (or a Flip emulator), check this, and whether the Flip has a touchscreen: without one, results and links would need the keypad's arrow keys too.
+
+## Languages
+
+One setting, at the top of About, changes both Wiki's own text and the Wikipedia it searches. English is the default. Each language's text is in `Language.kt`; Wiki can't use Android's string resources for this, because switching an app's language needs an Android `Context`, which Light doesn't allow tools.
+
+- **Only Latin-alphabet languages,** because Light's on-screen keyboard only has Latin layouts (QWERTY, Colemak, AZERTY). Wiki keeps the English QWERTY layout for all of them. Wikipedia's search mostly ignores accents, so typing "Koln" finds Köln.
+- **Credits, license, trademark, privacy and the rest of About stay in English,** so their wording stays exactly as Wikimedia's rules require. Only Wiki's buttons, messages, the About intro and the language setting are translated. Each article's credit links to the Wikipedia it came from.
+- **Articles remember their language.** Searches use the language chosen at the time; links in an article open articles on the same Wikipedia; saved articles keep working after switching, and the saved list marks ones from another language, as in "Berlin (de)". Articles saved before 1.1 are English.
+- **Reference sections aren't left out in other languages.** On English Wikipedia, `ArticleParser` drops References, External links and so on, keeping any "This article incorporates text from…" notice it finds there. It only recognises those notices in English, so on other Wikipedias it keeps the sections rather than risk dropping one. A section like "Weblinks" (German: external links) therefore still appears in the contents.
+- **The translations haven't been checked by native speakers yet.** They were drafted for 1.1; please have someone who speaks each language read through its section of `Language.kt` (and look at the screens) before relying on it.
 
 ## Attribution and Wikipedia's rules
 
@@ -62,7 +75,7 @@ Wikipedia's text is free to reuse under **CC BY-SA 4.0**, with conditions. Here 
 
 The wording lives in `Attribution.kt`, with the same sources noted at the top. **Check these sources before changing it.** We're not lawyers, and this is our reading of the rules, not legal advice.
 
-Not covered: images (never shown), and non-English Wikipedias (Wiki uses English Wikipedia only).
+Not covered: images (never shown). For other languages, Wiki applies the same rules: these policies cover every Wikipedia, and all of them use CC BY-SA 4.0. Imported-text notices are kept by keeping their sections (see [Languages](#languages)).
 
 ## Testing
 

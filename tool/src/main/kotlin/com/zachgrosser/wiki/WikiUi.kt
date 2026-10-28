@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -40,25 +41,32 @@ import com.thelightphone.sdk.ui.LightTopBarCenter
 import com.thelightphone.sdk.ui.designVerticalPxToSp
 import com.thelightphone.sdk.ui.gridUnitsAsDp
 
-/** Applies the user's LightOS theme (light or dark) and fills the screen with its background. */
+/**
+ * Applies the user's LightOS theme (light or dark), fills the screen with its background, and
+ * provides the language chosen in Wiki (LocalLanguage).
+ */
 @Composable
 fun WikiTheme(content: @Composable () -> Unit) {
     val colors by LightThemeController.colors.collectAsState()
-    LightTheme(colors = colors) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(LightThemeTokens.colors.background),
-        ) {
-            content()
+    val language by LanguageSetting.current.collectAsState()
+    CompositionLocalProvider(LocalLanguage provides language) {
+        LightTheme(colors = colors) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(LightThemeTokens.colors.background),
+            ) {
+                content()
+            }
         }
     }
 }
 
+@Composable
 fun backButton(onClick: () -> Unit) = LightBarButton.LightIcon(
     icon = LightIcons.BACK,
     onClick = onClick,
-    contentDescription = "Back",
+    contentDescription = strings().back,
 )
 
 /** A top bar plus a centred message, used while loading. */
@@ -226,7 +234,7 @@ fun ArticleCredit(article: Article, showNotices: Boolean, onOpenArticle: (String
     val unit = 1f.gridUnitsAsDp()
     Column(modifier = Modifier.padding(top = unit * 1.5f, bottom = unit * 2f)) {
         LightText(
-            text = Attribution.forArticle(article.title),
+            text = Attribution.forArticle(article.title, Language.fromCode(article.language)),
             variant = LightTextVariant.Detail,
             lighten = true,
         )

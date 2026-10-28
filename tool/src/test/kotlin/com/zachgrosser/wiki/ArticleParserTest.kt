@@ -190,6 +190,26 @@ class ArticleParserTest {
     }
 
     @Test
+    fun `other languages keep their own reference sections, and skip their file and category links`() {
+        val html = """
+            <div class="mw-parser-output"><p>Intro mit <a href="/wiki/Datei:Foto.jpg">Bild</a> und <a href="/wiki/Rhein">Rhein</a>.</p>
+            <div class="mw-heading mw-heading2"><h2>Geschichte</h2></div><p>Text.</p>
+            <div class="mw-heading mw-heading2"><h2>Literatur</h2></div><ul><li>Ein Buch.</li></ul>
+            <div class="mw-heading mw-heading2"><h2>Einzelnachweise</h2></div><ol class="references"><li>Quelle.</li></ol>
+            <div class="klappleiste mw-collapsible navileiste navigation-not-searchable center"><div class="klappleiste-kopf">Städte in Deutschland</div></div>
+            <div class="hintergrundfarbe1 rahmenfarbe1 navigation-not-searchable normdaten-typ-g">Normdaten (Geografikum): GND</div>
+            <div class="mw-heading mw-heading2"><h2>References</h2></div><p>An English heading on German Wikipedia stays.</p></div>
+        """.trimIndent()
+        val article = ArticleParser.parse("Köln", 1, 1, html, Language.German)
+
+        assertEquals("de", article.language)
+        // Einzelnachweise had only a citation list, a navigation box and authority control, which
+        // go by their class, leaving nothing.
+        assertEquals(listOf("Geschichte", "Literatur", "References"), article.sections.map { it.title })
+        assertEquals(listOf("Rhein"), article.lead.single().spans.mapNotNull { it.target })
+    }
+
+    @Test
     fun `link targets are decoded`() {
         assertEquals("Café au lait", ArticleParser.linkTarget("/wiki/Caf%C3%A9_au_lait#History"))
         assertEquals("C++", ArticleParser.linkTarget("/wiki/C%2B%2B"))
