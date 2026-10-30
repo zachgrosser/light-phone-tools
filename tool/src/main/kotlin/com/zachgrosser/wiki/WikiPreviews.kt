@@ -10,13 +10,9 @@ import com.thelightphone.lp3Keyboard.ui.viewmodel.EnQwertyLp3KeyboardViewModel
 import com.thelightphone.sdk.ui.defaultKeyboardOptions
 import kotlinx.coroutines.flow.MutableStateFlow
 
-// Previews of every screen at each Light device's screen size, to check layouts without an
-// emulator. In Android Studio, open this file and choose "Split" or "Design" (top right).
-//
-// Light Phone III: 1080 x 1240 pixels, 3.92". Light's own previews use these dp values.
-// Light Flip:      480 x 640 pixels, 2.8" (announced July 2026, shipping April 2027). The dp
-//                  size assumes roughly 280 dpi; the Light SDK scales text and spacing to the
-//                  screen, so the proportions are what matter.
+// Every screen at both screen sizes. Open in Android Studio and pick Split.
+// Light Phone III is 1080x1240 (Light's own preview size). Light Flip is 480x640, at a guessed
+// ~280 dpi.
 
 @Preview(name = "Light Phone III", widthDp = 360, heightDp = 413, showBackground = true, backgroundColor = 0xFF000000)
 @Preview(name = "Light Flip", widthDp = 274, heightDp = 366, showBackground = true, backgroundColor = 0xFF000000)
@@ -34,7 +30,6 @@ private fun HomeEmptyPreview() = WikiTheme { HomePreview(query = "", saved = emp
 @Composable
 private fun HomeWithSavedPreview() = WikiTheme { HomePreview(query = "Amsterdam", saved = SAMPLE_SAVED, keyboardShown = true) }
 
-/** After typing on a hardware keyboard or keypad: the on-screen keyboard steps aside. */
 @LightDevicePreviews
 @Composable
 private fun HomeHardwareKeyboardPreview() = WikiTheme {
@@ -59,7 +54,7 @@ private fun HomePreview(query: String, saved: List<SavedArticle>, keyboardShown:
         onTapSearchBox = {},
         onHardwareKey = { false },
         onOpenArticle = {},
-        onAbout = {},
+        onSettings = {},
     )
 }
 
@@ -92,19 +87,22 @@ private fun SectionPreview() = WikiTheme {
 @LightDevicePreviews
 @Composable
 private fun ArticleEndPreview() = WikiTheme {
-    // The end of an article: its credit, license, changes note and imported-text notices.
     ArticleCredit(SAMPLE_ARTICLE, showNotices = true, onOpenArticle = {})
 }
 
 @LightDevicePreviews
 @Composable
-private fun AboutPreview() = WikiTheme { AboutContent(onBack = {}, onLanguage = {}) }
+private fun SettingsPreview() = WikiTheme { SettingsContent(onBack = {}, onLanguage = {}, onAbout = {}) }
 
 @LightDevicePreviews
 @Composable
-private fun LanguagesPreview() = WikiTheme { LanguagesContent(onBack = {}, onChoose = {}) }
+private fun LanguagePreview() = WikiTheme { LanguageContent(onBack = {}, onChoose = {}) }
 
-/** German has some of the longest words, so it's the one to check for fit. Saved articles from other Wikipedias say which. */
+@LightDevicePreviews
+@Composable
+private fun AboutPreview() = WikiTheme { AboutContent(onBack = {}) }
+
+// German has the longest words.
 @LightDevicePreviews
 @Composable
 private fun HomeGermanPreview() = WikiTheme {
@@ -115,17 +113,18 @@ private fun HomeGermanPreview() = WikiTheme {
 
 @LightDevicePreviews
 @Composable
-private fun AboutFrenchPreview() = WikiTheme {
-    CompositionLocalProvider(LocalLanguage provides Language.French) { AboutContent(onBack = {}, onLanguage = {}) }
+private fun SettingsFrenchPreview() = WikiTheme {
+    CompositionLocalProvider(LocalLanguage provides Language.French) {
+        SettingsContent(onBack = {}, onLanguage = {}, onAbout = {})
+    }
 }
 
 @LightDevicePreviews
 @Composable
 private fun LoadingPreview() = WikiTheme { MessageScreen(title = "Light Phone III", message = "Loading…", onBack = {}) }
 
-// --- Sample content (written for these previews, not taken from Wikipedia) -------------------
+// Made-up sample content, not from Wikipedia.
 
-/** A paragraph block where each of [links] (which must appear in [text]) is a link to an article of that name. */
 private fun linked(text: String, vararg links: String, kind: BlockKind = BlockKind.Paragraph) = Block(
     kind = kind,
     text = text,

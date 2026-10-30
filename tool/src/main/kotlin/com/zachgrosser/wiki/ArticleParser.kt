@@ -2,13 +2,9 @@ package com.zachgrosser.wiki
 
 import java.io.ByteArrayOutputStream
 
-/**
- * Turns the HTML from Wikipedia's `action=parse` API into an [Article] of plain-text blocks.
- *
- * Keeps paragraphs, headings, lists, quotes and hatnotes ("Main article: …"), with links to
- * other articles plus bold and italic. Drops what doesn't suit a small text-only screen:
- * images, tables, infoboxes, citation markers, navigation boxes and the reference sections.
- */
+// Turns action=parse HTML into plain-text blocks: paragraphs, headings, lists, quotes and
+// hatnotes, with article links, bold and italic. Images, tables, infoboxes, citations and
+// navigation boxes are left out.
 object ArticleParser {
 
     fun parse(
@@ -23,12 +19,8 @@ object ArticleParser {
         return builder.build(title, pageId, revisionId)
     }
 
-    /**
-     * Sections that are mostly citations or outbound links, which aren't useful here. English
-     * Wikipedia only: other languages keep these sections, because the credit notices that must
-     * be kept from them ([ATTRIBUTION_NOTICE]) are only recognised in English. Their citation
-     * lists still go, by their HTML class, which is the same in every language.
-     */
+    // English only. ATTRIBUTION_NOTICE only recognises English notices, so other languages keep
+    // these sections rather than risk losing one.
     internal val DROPPED_SECTIONS = setOf(
         "references", "notes", "footnotes", "citations", "sources", "bibliography",
         "external links", "further reading", "works cited", "cited sources",
@@ -43,13 +35,10 @@ object ArticleParser {
         "module", "mediawiki", "timedtext", "book", "project", "wp", "gadget", "topic",
     )
 
-    /**
-     * Matches the credit notices Wikipedia shows for imported text, such as "This article
-     * incorporates text from a free content work" or "…incorporates public domain material from…".
-     */
+    // "This article incorporates text from…", "…incorporates public domain material from…"
     internal val ATTRIBUTION_NOTICE = Regex("""\bincorporates\b[^.]*\b(text|material)\b""", RegexOption.IGNORE_CASE)
 
-    /** Returns the article title an internal link points to, or null for anything else. */
+    // Null for anything that isn't a link to another article.
     fun linkTarget(href: String?, language: Language = Language.English): String? {
         if (href == null || !href.startsWith("/wiki/")) return null
         val raw = href.substring("/wiki/".length).substringBefore('#').substringBefore('?')
@@ -91,18 +80,13 @@ object ArticleParser {
     }
 }
 
-/** Receives the pieces of an HTML document, in order. */
 internal interface HtmlHandler {
     fun onStartTag(name: String, attributes: Map<String, String>, selfClosing: Boolean)
     fun onEndTag(name: String)
     fun onText(text: String)
 }
 
-/**
- * A small, forgiving HTML tokenizer. Wikipedia's HTML is well-formed, so this doesn't try to
- * handle every quirk of the HTML spec. Comments are dropped and the contents of `<style>` and
- * `<script>` are skipped without being reported.
- */
+// Wikipedia's HTML is well-formed, so this doesn't try to cover the whole spec.
 internal class HtmlTokenizer(private val html: String) {
 
     fun tokenize(handler: HtmlHandler) {
@@ -196,7 +180,7 @@ internal class HtmlTokenizer(private val html: String) {
             val close = html.indexOf('>', end)
             return if (close < 0) html.length else close + 1
         }
-        // Void elements (<br>, <img>, …) never have an end tag, so report them as self-closing.
+        // <br>, <img> and friends never get an end tag.
         handler.onStartTag(name, attributes, selfClosing || name in VOID_ELEMENTS)
         return j
     }
@@ -256,7 +240,6 @@ internal class HtmlTokenizer(private val html: String) {
     }
 }
 
-/** Walks the tokens and collects blocks, sections, links and styles. */
 private class ArticleBuilder(private val language: Language) : HtmlHandler {
 
     private enum class Role {
@@ -389,8 +372,7 @@ private class ArticleBuilder(private val language: Language) : HtmlHandler {
             Role.Heading -> onHeading(frame.headingLevel, heading.toString().trim())
             Role.Description -> Unit
             else -> {
-                // Put the frame back while flushing so the block gets the right kind (list item,
-                // quote, …) and a term's bold style is closed along with it.
+                // Flush with the frame still on the stack so the block gets the right kind.
                 stack.add(frame)
                 flushBlock()
                 stack.removeAt(stack.size - 1)
@@ -422,11 +404,7 @@ private class ArticleBuilder(private val language: Language) : HtmlHandler {
         appendCollapsed(text, mapped)
     }
 
-    /**
-     * "km<sup>2</sup>" reads as "km²" and "H<sub>2</sub>O" as "H₂O". Other superscripts with
-     * letters are usually ordinals ("19<sup>th</sup>") and stay as they are; anything else gets
-     * a "^" or "_" prefix.
-     */
+    // km² and H₂O. Ordinals like 19th stay as they are; anything else gets ^ or _.
     private fun toScript(value: String, table: Map<Char, Char>, fallbackPrefix: String): String {
         val trimmed = value.trim()
         if (trimmed.isEmpty()) return value
@@ -453,13 +431,13 @@ private class ArticleBuilder(private val language: Language) : HtmlHandler {
         val keep = text.isNotBlank() &&
             (droppedLevel == null || ArticleParser.ATTRIBUTION_NOTICE.containsMatchIn(text))
         if (keep) {
-            // Close styles that are still open; they continue in the next block.
+            // Styles still open carry on into the next block.
             stack.forEach { frame ->
                 val kind = frame.span ?: return@forEach
                 if (kind == SpanKind.Link && frame.linkTarget == null) return@forEach
                 addSpan(frame.spanStart, text.length, kind, frame.linkTarget)
             }
-            // Drop leading spaces (including the no-break space some templates start with).
+            // Some templates start with a no-break space.
             var leading = 0
             while (leading < text.length && text[leading].isWhitespace()) leading++
             text.delete(0, leading)
@@ -470,7 +448,6 @@ private class ArticleBuilder(private val language: Language) : HtmlHandler {
             if (droppedLevel == null) {
                 current.add(makeBlock(text.toString(), blockSpans))
             } else {
-                // Inside a left-out section (Sources, References…), keep only credit notices.
                 notices.add(Block(BlockKind.Note, text.toString(), blockSpans))
             }
         }
@@ -538,7 +515,7 @@ private class ArticleBuilder(private val language: Language) : HtmlHandler {
         )
     }
 
-    /** Removes subheadings that ended up with no text under them (e.g. only a table). */
+    // e.g. a subheading over nothing but a table.
     private fun withoutEmptySubheadings(blocks: List<Block>): List<Block> {
         val result = ArrayList<Block>(blocks.size)
         for (i in blocks.indices) {
@@ -595,12 +572,7 @@ private class ArticleBuilder(private val language: Language) : HtmlHandler {
             "printfooter", "mw-jump-link", "navigation-only", "Z3988",
         )
 
-        /**
-         * The same kinds of boxes on the other Wikipedias Wiki can read, which name them their
-         * own way: navigation boxes (de "navileiste", pt "navigation-box"), portal and sister
-         * project links (fr "bandeau-portail", sv "interProject") and authority control
-         * (de "normdaten-…", es "mw-authority-control"). None of these appear on English Wikipedia.
-         */
+        // Navigation, portal and authority control boxes on the other Wikipedias.
         private val OTHER_WIKIS_SKIPPED_CLASSES = setOf(
             "navileiste", "klappleiste", "BoxenVerschmelzen",
             "navbox-container", "bandeau-portail", "boite-grise",
@@ -629,7 +601,7 @@ private class ArticleBuilder(private val language: Language) : HtmlHandler {
             "textbf", "rm", "bf", "it", "big", "Big", "bigg", "Bigg",
         )
 
-        /** Makes the LaTeX that Wikipedia includes with each formula a little easier to read. */
+        // Wikipedia sends LaTeX alongside each formula. Tidy it up a bit.
         fun readableFormula(latex: String): String {
             val out = StringBuilder()
             var i = 0
@@ -647,7 +619,7 @@ private class ArticleBuilder(private val language: Language) : HtmlHandler {
                         }
                         i = j
                     } else {
-                        // Spacing commands such as "\," and "\ ".
+                        // \, and friends
                         if (latex[j] == '{' || latex[j] == '}') out.append(latex[j]) else out.append(' ')
                         i = j + 1
                     }
@@ -658,7 +630,7 @@ private class ArticleBuilder(private val language: Language) : HtmlHandler {
             }
             var result = out.toString().replace(Regex("\\s+"), " ").trim()
                 .replace("{ ", "{").replace(" }", "}")
-            // "{\displaystyle e^{i\pi}+1=0}" leaves a pair of outer braces behind.
+            // {\displaystyle …} leaves outer braces behind.
             while (result.startsWith("{") && result.endsWith("}") && bracesBalancedInside(result)) {
                 result = result.substring(1, result.length - 1).trim()
             }

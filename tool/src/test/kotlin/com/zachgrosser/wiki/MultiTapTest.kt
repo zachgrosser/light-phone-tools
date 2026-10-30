@@ -5,7 +5,7 @@ import kotlin.test.assertEquals
 
 class MultiTapTest {
 
-    /** A keypad typing into a text box, with a clock that only moves when told to. */
+    // A keypad typing into a string, with a clock that only moves when told to.
     private class Keypad {
         private val multiTap = MultiTap(timeoutMillis = 1_000)
         private val text = StringBuilder()

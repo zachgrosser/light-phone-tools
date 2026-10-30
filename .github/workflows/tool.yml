@@ -1,13 +1,7 @@
 name: Tool
 
-# Checks our tool on every push that touches it:
-#   1. runs its unit tests,
-#   2. builds the release version the way Light's build server does (code shrinking on,
-#      arm64 only), to catch problems before submitting,
-#   3. builds an installable test APK (debug and release) you can download from this run's
-#      "Artifacts" section and sideload onto a Light Phone III.
-# The APKs are signed with the SDK's public development key, for testing only. Light signs the
-# real one when the tool is submitted on dashboard.thelightphone.com.
+# Tests, a release build like Light's server makes, and test APKs under Artifacts.
+# The APKs use the SDK's public dev key; Light signs the real one.
 
 on:
   push:
@@ -51,7 +45,6 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      # toolOnly skips Light's example tools and emulator, which we don't need here.
       - name: Unit tests
         run: ./gradlew :tool:testDebugUnitTest -DlightSdk.toolOnly=true --stacktrace
 

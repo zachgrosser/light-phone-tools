@@ -41,10 +41,7 @@ import com.thelightphone.sdk.ui.LightTopBarCenter
 import com.thelightphone.sdk.ui.designVerticalPxToSp
 import com.thelightphone.sdk.ui.gridUnitsAsDp
 
-/**
- * Applies the user's LightOS theme (light or dark), fills the screen with its background, and
- * provides the language chosen in Wiki (LocalLanguage).
- */
+// LightOS's light or dark theme, plus Wiki's language.
 @Composable
 fun WikiTheme(content: @Composable () -> Unit) {
     val colors by LightThemeController.colors.collectAsState()
@@ -69,7 +66,6 @@ fun backButton(onClick: () -> Unit) = LightBarButton.LightIcon(
     contentDescription = strings().back,
 )
 
-/** A top bar plus a centred message, used while loading. */
 @Composable
 fun MessageScreen(title: String, message: String, onBack: (() -> Unit)? = null) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -89,14 +85,14 @@ fun MessageScreen(title: String, message: String, onBack: (() -> Unit)? = null) 
     }
 }
 
-/** Body text: the theme's paragraph style with a little more room between lines for reading. */
+// Paragraph style with a bit more line spacing for reading.
 @Composable
 fun readingStyle(): TextStyle = scaled(LightThemeTokens.typography.paragraph, lineHeightMultiplier = 1.4f)
 
 @Composable
 fun noteStyle(): TextStyle = scaled(LightThemeTokens.typography.detail, lineHeightMultiplier = 1.45f)
 
-/** One of Light's text styles, scaled to the screen exactly as LightText does. */
+// Light's styles are in design pixels; scale them the way LightText does.
 @Composable
 fun lightStyle(base: TextStyle): TextStyle = base.copy(
     fontSize = base.fontSize.value.designVerticalPxToSp(),
@@ -108,7 +104,6 @@ fun lightStyle(base: TextStyle): TextStyle = base.copy(
     },
 )
 
-/** Light's type sizes are in "design pixels" and need scaling to the screen, like LightText does. */
 @Composable
 private fun scaled(base: TextStyle, lineHeightMultiplier: Float): TextStyle = base.copy(
     fontSize = base.fontSize.value.designVerticalPxToSp(),
@@ -120,7 +115,6 @@ private fun scaled(base: TextStyle, lineHeightMultiplier: Float): TextStyle = ba
     },
 )
 
-/** Draws a list of article blocks. Tapping a link calls [onOpenArticle] with its title. */
 @Composable
 fun ArticleBlocks(blocks: List<Block>, onOpenArticle: (String) -> Unit) {
     blocks.forEach { block -> BlockView(block, onOpenArticle) }
@@ -225,10 +219,7 @@ private fun Block.toAnnotatedString(onOpen: (String) -> Unit): AnnotatedString =
     }
 }
 
-/**
- * The credit required by CC BY-SA, shown at the end of an article and of each section. With
- * [showNotices], also the article's own credit notices for text it imported from other sources.
- */
+// The CC BY-SA credit at the end of an article and of every section.
 @Composable
 fun ArticleCredit(article: Article, showNotices: Boolean, onOpenArticle: (String) -> Unit) {
     val unit = 1f.gridUnitsAsDp()

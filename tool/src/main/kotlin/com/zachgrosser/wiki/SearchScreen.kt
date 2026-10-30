@@ -44,10 +44,6 @@ class SearchViewModel(language: Language, query: String) : LightViewModel<Unit>(
     }
 }
 
-/**
- * Results for [query] from [language]'s Wikipedia, typed on the home screen. Back returns there
- * to change it.
- */
 class SearchScreen(
     sealedActivity: SealedLightActivity,
     private val query: String,

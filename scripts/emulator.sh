@@ -1,19 +1,13 @@
 #!/bin/bash
-# Runs our tool on Light's LightOS emulator, inside an Android Studio virtual phone.
-# Follows Light's guide, docs/system_app/README.md, with the steps scripted.
+# Runs Wiki on Light's LightOS emulator. Scripts the steps in docs/system_app/README.md.
 #
-#   scripts/emulator.sh setup [avd]   first time: prepares the virtual phone, installs the LightOS
-#                                     emulator and our tool (takes 15-30 minutes)
-#   scripts/emulator.sh start [avd]   starts the virtual phone later on (always use this, not the
-#                                     play button in Android Studio, or LightOS won't be there)
-#   scripts/emulator.sh install       rebuilds our tool and installs it on the running phone
-#   scripts/emulator.sh screen flip   makes the running phone's screen match the Light Flip
-#                                     (480 x 640); "screen lp3" switches back
+#   scripts/emulator.sh setup [avd]       first time only, 15-30 minutes
+#   scripts/emulator.sh start [avd]       use this, not Android Studio's play button
+#   scripts/emulator.sh install           rebuild Wiki and install it
+#   scripts/emulator.sh screen flip|lp3   Light Flip (480x640) or Light Phone III screen
 #
-# [avd] is the virtual phone's name from Android Studio's Device Manager. You can leave it out
-# if you only have one.
-#
-# Written for macOS (and its bash 3.2); should also work on Linux.
+# avd is the virtual phone's name in Device Manager; optional if there's only one.
+# Written for macOS's bash 3.2.
 
 set -euo pipefail
 
@@ -28,7 +22,7 @@ LOG_DIR="$REPO/build/emulator-logs"
 say() { printf '\n==> %s\n' "$*"; }
 fail() { printf '\nProblem: %s\n' "$*" >&2; exit 1; }
 
-# --- Finding Android Studio's tools ----------------------------------------------------------
+# Finding Android Studio's tools
 
 find_sdk() {
   local candidate
@@ -41,26 +35,20 @@ find_sdk() {
   fail "Couldn't find the Android SDK. Install Android Studio and finish its setup wizard first."
 }
 
-# Light's build tools are pinned to Java 17 (jvmToolchain(17)), so the build needs a Java 17
-# installed, and Gradle 9.0 itself can't run on the Java 25 that newer Android Studios bundle.
-# Simplest is to run everything on Java 17.
+# Light's build needs Java 17, and Gradle 9.0 won't run on the Java 25 newer Android Studios ship.
 NEEDED_JAVA=17
 
-# Prints the major version of the Java in the given home folder (e.g. 21), or nothing.
 java_major() {
   local home="$1" line version
   [ -x "$home/bin/java" ] || return 0
   line="$("$home/bin/java" -version 2>&1 | grep -i 'version "' | head -1 || true)"
   version="$(printf '%s' "$line" | sed -n 's/.*version "\([0-9][0-9]*\).*/\1/p')"
-  # Java 8 and older report "1.8".
   [ "$version" = "1" ] && version=8
   printf '%s' "$version"
 }
 
 find_java() {
   local candidate
-  # Places a Java 17 might be: JAVA_HOME, macOS's registry (which includes JDKs Android Studio
-  # downloaded), the usual folders, Homebrew, and Android Studio's own Java.
   {
     [ -n "${JAVA_HOME:-}" ] && printf '%s\n' "$JAVA_HOME"
     [ -x /usr/libexec/java_home ] && /usr/libexec/java_home -v "$NEEDED_JAVA" 2>/dev/null
@@ -94,14 +82,13 @@ setup_tools() {
   EMULATOR="$SDK/emulator/emulator"
   [ -x "$EMULATOR" ] || fail "Android Studio's emulator isn't installed. In Android Studio, open Settings > Languages & Frameworks > Android SDK > SDK Tools and tick Android Emulator."
   export ANDROID_HOME="$SDK"
-  # Gradle on the command line needs to know where the SDK is.
   if [ ! -f local.properties ]; then
     printf 'sdk.dir=%s\n' "$SDK" > local.properties
   fi
   mkdir -p "$LOG_DIR"
 }
 
-# --- The virtual phone -----------------------------------------------------------------------
+# The virtual phone
 
 pick_avd() {
   local wanted="${1:-}" avds count
@@ -124,7 +111,6 @@ avd_config() {
   printf '%s/config.ini' "$path"
 }
 
-# Sets key=value in an ini file, replacing the line if the key is already there.
 set_ini() {
   local file="$1" key="$2" value="$3" tmp
   tmp="$(mktemp)"
@@ -137,7 +123,7 @@ set_ini() {
   mv "$tmp" "$file"
 }
 
-# Light Phone III screen: 1080 x 1240 pixels, 3.92 inches (about 420 pixels per inch).
+# Light Phone III: 1080x1240, 3.92", about 420 dpi.
 shape_like_light_phone() {
   local config
   config="$(avd_config)"
@@ -151,7 +137,7 @@ shape_like_light_phone() {
   set_ini "$config" skin.dynamic yes
   set_ini "$config" showDeviceFrame no
   set_ini "$config" hw.initialOrientation portrait
-  # Pass the computer's keyboard through as a hardware keyboard, to test typing on one.
+  # The Mac's keyboard acts as a hardware keyboard.
   set_ini "$config" hw.keyboard yes
   echo "Set '$AVD' to the Light Phone III's screen size (old settings kept in config.ini.before-light)."
 }
@@ -162,7 +148,6 @@ running_emulator() {
 
 reboot_and_wait() {
   "$ADB" reboot
-  # Wait for it to actually go down, so we don't mistake the old boot for the new one.
   "$ADB" wait-for-disconnect >/dev/null 2>&1 || sleep 15
   wait_for_boot
 }
@@ -178,7 +163,6 @@ wait_for_boot() {
   sleep 3
 }
 
-# True if this virtual phone is running and was started in the mode LightOS needs.
 running_in_light_mode() {
   ps -axo command= 2>/dev/null | grep -e "-avd $AVD" | grep -e "-writable-system" >/dev/null
 }
@@ -195,8 +179,7 @@ start_emulator() {
     fail "A virtual phone is already running, but not in the mode LightOS needs. Close its window first, then run this again."
   fi
   say "Starting '$AVD' (a window will open; leave it running)"
-  # -writable-system keeps the LightOS emulator installed in the system partition. It's needed
-  # every time, which is why the play button in Android Studio won't do.
+  # LightOS lives in the system partition, which needs -writable-system on every start.
   nohup "$EMULATOR" -avd "$AVD" -writable-system -no-snapshot >"$LOG_DIR/emulator.log" 2>&1 &
   local waited=0
   until [ -n "$(running_emulator)" ]; do
@@ -226,7 +209,6 @@ become_root() {
   if printf '%s' "$out" | grep -i "production builds" >/dev/null; then
     fail "This virtual phone uses a Google Play system image, which LightOS can't run on. Create one with the API 34 'Android Open Source' image (ARM 64 v8a) instead (see DEVELOPING.md)."
   fi
-  # adbd restarts as root; give it a moment to come back.
   sleep 3
   "$ADB" wait-for-device
   sleep 2
@@ -241,7 +223,7 @@ make_system_writable() {
   become_root
   "$ADB" remount >"$LOG_DIR/remount.log" 2>&1 || true
   if system_is_writable; then return; fi
-  # First time: Android turns off verified boot, then needs a restart.
+  # The first time, verity has to be turned off, which needs a restart.
   "$ADB" disable-verity >>"$LOG_DIR/remount.log" 2>&1 || true
   echo "Restarting the virtual phone once to finish (about a minute)..."
   reboot_and_wait
@@ -259,7 +241,7 @@ check_test_keys() {
   esac
 }
 
-# --- The LightOS emulator app ----------------------------------------------------------------
+# The LightOS emulator app
 
 make_platform_key() {
   local keystore="sdk/emulator/keys/platform.jks" tmp
@@ -298,14 +280,14 @@ install_lightos_emulator() {
     fail "The LightOS emulator isn't running with system permissions. See Troubleshooting in docs/system_app/README.md."
   fi
 
-  # Optional touches from Light's guide: LightOS as the home screen, no animations.
+  # Optional, from Light's guide: LightOS as home screen, no animations.
   "$ADB" shell cmd package set-home-activity "$EMULATOR_PACKAGE/.MainActivity" >/dev/null 2>&1 || true
   "$ADB" shell settings put global window_animation_scale 0
   "$ADB" shell settings put global transition_animation_scale 0
   "$ADB" shell settings put global animator_duration_scale 0
 }
 
-# --- Our tool --------------------------------------------------------------------------------
+# Wiki
 
 TOML_BACKUP=""
 restore_toml() {
@@ -322,8 +304,7 @@ install_tool() {
   label="$(sed -n 's/^label *= *"\(.*\)"/\1/p' "$TOOL_TOML")"
   say "Building $label and installing it"
 
-  # A real phone's LightOS is com.lightos; the emulator's is different. Point the build at the
-  # emulator for this install only, then put the file back as it was.
+  # Point serverPackage at the emulator for this build only.
   TOML_BACKUP="$(mktemp)"
   cp "$TOOL_TOML" "$TOML_BACKUP"
   trap restore_toml EXIT
@@ -346,7 +327,7 @@ and choose All Tools. That's needed because $label isn't signed by Light.
 EOF
 }
 
-# --- Commands --------------------------------------------------------------------------------
+# Commands
 
 COMMAND="${1:-}"
 case "$COMMAND" in
@@ -379,7 +360,7 @@ case "$COMMAND" in
     use_running_emulator
     case "${2:-}" in
       flip)
-        # Light Flip: 480 x 640 pixels on a 2.8" screen (about 285 pixels per inch).
+        # 2.8", about 285 dpi
         "$ADB" shell wm size 480x640
         "$ADB" shell wm density 280
         say "The virtual phone now has the Light Flip's screen (480 x 640). Back with: scripts/emulator.sh screen lp3"
@@ -393,7 +374,7 @@ case "$COMMAND" in
     esac
     ;;
   *)
-    sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'
     exit 1
     ;;
 esac
