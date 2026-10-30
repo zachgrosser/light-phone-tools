@@ -12,4 +12,4 @@ labels: bug
 
 **Phone:** Light Phone III / Light Flip / emulator, and LightOS version if you know it (Settings)
 
-**Wiki version:** (bottom of Wiki's About screen)
+**Wiki version:** (Settings → About, at the bottom)

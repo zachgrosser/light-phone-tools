@@ -1,35 +1,32 @@
-# Submitting Wiki to Light
+# Submitting to Light
 
-Light builds and signs community tools from a **public** GitHub repo, then reviews them for their Tool Library. Their steps are in [README.md, "Submitting Your Tool"](README.md#submitting-your-tool); this is our checklist around them.
+Light builds and signs tools from a public GitHub repo and reviews each version before it goes in their Tool Library. Their steps are in [README.md](README.md#submitting-your-tool); this is our checklist.
 
 ## Before submitting
 
-- [ ] **Merged into `main`.** Light reads the tool's package name from the default branch. (A pull request that brings in Light's SDK, as the first Wiki one does, uses **Create a merge commit**, not squash.)
-- [ ] **Latest Light SDK merged in.** Light requires it (see [DEVELOPING.md §6](DEVELOPING.md#6-getting-lights-latest-sdk)).
-- [ ] **The Tool workflow is green on `main`**, especially the release build, which matches what Light's server runs.
-- [ ] **Tried the release APK** on the emulator or a phone (DEVELOPING.md §5): search, open an article, follow a link, read sections, star it, read it offline, About.
-- [ ] **Checked both screen sizes** in `WikiPreviews.kt` or with `scripts/emulator.sh screen flip`.
-- [ ] **Version bumped** in `tool/lighttool.toml`: `versionCode` must be higher than the last build sent to Light; `versionName` is what people see (e.g. `1.0.0`).
-- [ ] **`id` is `com.zachgrosser.wiki`** and `serverPackage` is `com.lightos`. The id can never change after the first submission.
-- [ ] **About and credits reviewed** against [tool/README.md, "Attribution and Wikipedia's rules"](tool/README.md#attribution-and-wikipedias-rules).
-- [ ] **Against Light's [Tool Guidelines](TOOL_GUIDELINES.md):** intentional (search-led; no feeds or notifications), private (no tracking; disclosed), no ads, open source (MIT), built with the SDK, Light's design components, works offline for saved articles, Wikipedia's license and trademark rules followed.
-- [ ] **We can explain every change in our own words.** Light's team reviews each submitted build before approving it.
-
-## Make the repo public
-
-**Settings → General → Danger Zone → Change visibility → Public.** Anyone will be able to see the code and its history. It contains no keys or passwords: the signing key in `sdk/keys/` is Light's public development key, and `local.properties` is never committed. Once public, turn on branch protection for `main` (**Settings → Branches**), and the feedback link on Wiki's About screen starts working.
+- [ ] Merged into `main`.
+- [ ] Light's latest SDK merged in ([DEVELOPING.md](DEVELOPING.md#updating-lights-sdk)).
+- [ ] Builds against the SDK version Light's server uses ([DEVELOPING.md](DEVELOPING.md#lights-rules)).
+- [ ] The Tool check is green on `main`.
+- [ ] Tried the release APK on the emulator or a phone: search, open an article, follow a link, read a section, star it, read it offline, change the language, About.
+- [ ] Checked both screen sizes.
+- [ ] `versionCode` in `tool/lighttool.toml` is higher than the last one on Light's dashboard, and `versionName` is what people should see.
+- [ ] About and the credits still match [tool/README.md](tool/README.md#attribution-and-wikipedias-rules).
+- [ ] Still fits Light's [Tool Guidelines](TOOL_GUIDELINES.md).
 
 ## On Light's dashboard
 
-1. At [dashboard.thelightphone.com](https://dashboard.thelightphone.com): **Settings → Account → Developer Account**, turn developer mode on.
-2. **Manage Custom Tools → Submit New Tool**, and give the repo: `https://github.com/zachgrosser/light-phone-tools`.
-3. **Add at least one image.** Screenshots from the emulator work: the camera button on the emulator's side toolbar saves one. Good choices: the start-up screen, search results, an article, About.
-4. On the tool's page, **Submit build** with:
-   - **Git ref:** a tag such as `wiki-v1.0.0`, made on `main` (`git tag wiki-v1.0.0 && git push origin wiki-v1.0.0`), or a commit SHA.
-   - **Changelog:** a sentence or two.
-5. Wait for the build. If it fails, **View details** under Builds shows why; **Retry build** reruns the same ref. When it works, **Download APK** appears and the version waits for Light's approval.
-6. Light emails with feedback. Questions: tools@thelightphone.com.
+At [dashboard.thelightphone.com](https://dashboard.thelightphone.com):
 
-## Suggested listing text
+1. The first time only: turn on **Settings → Account → Developer Account**, then **Manage Custom Tools → Submit New Tool** with `https://github.com/zachgrosser/light-phone-tools`, and add at least one screenshot.
+2. Tag the release on `main` and push the tag, for example `git tag wiki-v1.1.0 && git push origin wiki-v1.1.0`.
+3. On the tool's page, **Submit build** with the tag as the git ref and a line or two of changelog.
+4. If the build fails, **View details** says why. Fix it and tag again; don't move a tag Light has already built.
 
-> **Wiki** — Search and read Wikipedia, one section at a time. Follow links between articles and star them to read offline. Text from Wikipedia™, by its volunteer contributors, under CC BY-SA 4.0. No ads or tracking. Not affiliated with or endorsed by the Wikimedia Foundation.
+Light emails with any feedback. Questions go to tools@thelightphone.com.
+
+## Listing text
+
+Light's description field takes up to 255 characters:
+
+> Search and read Wikipedia a section at a time. Follow links and star articles to read offline. Text from Wikipedia™, by its volunteer contributors, under CC BY-SA 4.0. No ads or tracking. Not affiliated with or endorsed by the Wikimedia Foundation.

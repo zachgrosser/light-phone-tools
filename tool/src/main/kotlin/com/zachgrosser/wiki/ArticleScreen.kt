@@ -31,42 +31,36 @@ import kotlinx.coroutines.launch
 sealed interface ArticleState {
     data object Loading : ArticleState
     data class Loaded(val article: Article, val isSaved: Boolean) : ArticleState
-    data class Failed(val message: String) : ArticleState
+    data class Failed(val error: Throwable) : ArticleState
 }
+
+enum class SavedNotice { Saved, Removed }
 
 class ArticleViewModel(
     private val requestedTitle: String,
+    private val language: Language,
     private val saved: SavedArticles,
 ) : LightViewModel<Unit>() {
 
     private val _state = MutableStateFlow<ArticleState>(ArticleState.Loading)
     val state: StateFlow<ArticleState> = _state
 
-    /** A short confirmation after saving or removing, shown under the title. */
-    private val _notice = MutableStateFlow<String?>(null)
-    val notice: StateFlow<String?> = _notice
+    private val _notice = MutableStateFlow<SavedNotice?>(null)
+    val notice: StateFlow<SavedNotice?> = _notice
     private var noticeJob: Job? = null
 
     init {
         viewModelScope.launch {
-            // Saved articles open straight from the phone, with or without a connection.
-            saved.find(requestedTitle)?.let { article ->
+            // Saved copies first, so they work offline.
+            saved.find(requestedTitle, language.code)?.let { article ->
                 _state.value = ArticleState.Loaded(article, isSaved = true)
                 return@launch
             }
-            WikiApi.fetchArticle(requestedTitle).fold(
+            WikiApi.fetchArticle(language, requestedTitle).fold(
                 onSuccess = { article ->
-                    _state.value = ArticleState.Loaded(article, isSaved = saved.isSaved(article.pageId))
+                    _state.value = ArticleState.Loaded(article, isSaved = saved.isSaved(article.pageId, article.language))
                 },
-                onFailure = { error ->
-                    _state.value = ArticleState.Failed(
-                        when (error) {
-                            is ArticleNotFoundException ->
-                                "Wikipedia doesn't have an article called “$requestedTitle”."
-                            else -> errorMessage(error) + " Saved articles can still be read offline."
-                        },
-                    )
-                },
+                onFailure = { error -> _state.value = ArticleState.Failed(error) },
             )
         }
     }
@@ -75,18 +69,18 @@ class ArticleViewModel(
         val loaded = _state.value as? ArticleState.Loaded ?: return
         viewModelScope.launch {
             val nowSaved = if (loaded.isSaved) {
-                saved.remove(loaded.article.pageId)
+                saved.remove(loaded.article.pageId, loaded.article.language)
                 false
             } else {
                 saved.save(loaded.article, aliases = listOf(requestedTitle))
                 true
             }
             _state.value = loaded.copy(isSaved = nowSaved)
-            showNotice(if (nowSaved) "Saved for reading offline." else "Removed from saved.")
+            showNotice(if (nowSaved) SavedNotice.Saved else SavedNotice.Removed)
         }
     }
 
-    private fun showNotice(message: String) {
+    private fun showNotice(message: SavedNotice) {
         noticeJob?.cancel()
         _notice.value = message
         noticeJob = viewModelScope.launch {
@@ -96,19 +90,19 @@ class ArticleViewModel(
     }
 }
 
-/** An article's title, intro and list of sections. */
 class ArticleScreen(
     sealedActivity: SealedLightActivity,
     private val title: String,
+    private val language: Language,
 ) : LightScreen<Unit, ArticleViewModel>(sealedActivity) {
 
     override val viewModelClass: Class<ArticleViewModel>
         get() = ArticleViewModel::class.java
 
-    override fun createViewModel() = ArticleViewModel(title, SavedArticles(lightContext.filesDir))
+    override fun createViewModel() = ArticleViewModel(title, language, SavedArticles(lightContext.filesDir))
 
     private fun openArticle(target: String) {
-        navigateTo({ ArticleScreen(it, target) })
+        navigateTo({ ArticleScreen(it, target, language) })
     }
 
     @Composable
@@ -120,12 +114,15 @@ class ArticleScreen(
             when (val current = state) {
                 ArticleState.Loading -> MessageScreen(
                     title = title,
-                    message = "Loading…",
+                    message = strings().loading,
                     onBack = { goBack() },
                 )
 
                 is ArticleState.Failed -> LightFullscreenModal(
-                    message = current.message,
+                    message = when (current.error) {
+                        is ArticleNotFoundException -> strings().noArticle(title)
+                        else -> errorMessage(current.error, strings()) + " " + strings().savedStillReadable
+                    },
                     onClose = { goBack() },
                 )
 
@@ -149,13 +146,14 @@ class ArticleScreen(
 internal fun ArticleContent(
     article: Article,
     isSaved: Boolean,
-    notice: String?,
+    notice: SavedNotice?,
     onBack: () -> Unit,
     onToggleSaved: () -> Unit,
     onOpenSection: (Int) -> Unit,
     onOpenArticle: (String) -> Unit,
 ) {
     val unit = 1f.gridUnitsAsDp()
+    val strings = strings()
     Column(modifier = Modifier.fillMaxSize()) {
         LightTopBar(
             leftButton = backButton(onBack),
@@ -163,7 +161,7 @@ internal fun ArticleContent(
             rightButton = LightBarButton.LightIcon(
                 icon = if (isSaved) LightIcons.STAR else LightIcons.STAR_OUTLINE,
                 onClick = onToggleSaved,
-                contentDescription = if (isSaved) "Remove from saved" else "Save for reading offline",
+                contentDescription = if (isSaved) strings.removeAction else strings.saveAction,
             ),
         )
         LightScrollView(
@@ -177,7 +175,11 @@ internal fun ArticleContent(
                 LightText(text = it, variant = LightTextVariant.Detail, lighten = true)
             }
             LightText(
-                text = notice ?: "",
+                text = when (notice) {
+                    SavedNotice.Saved -> strings.savedForOffline
+                    SavedNotice.Removed -> strings.removedFromSaved
+                    null -> ""
+                },
                 variant = LightTextVariant.Detail,
                 modifier = Modifier.padding(bottom = unit * 0.5f),
             )
@@ -185,7 +187,7 @@ internal fun ArticleContent(
 
             if (article.sections.isNotEmpty()) {
                 LightText(
-                    text = "Contents",
+                    text = strings.contents,
                     variant = LightTextVariant.Detail,
                     lighten = true,
                     modifier = Modifier.padding(top = unit, bottom = unit * 0.25f),

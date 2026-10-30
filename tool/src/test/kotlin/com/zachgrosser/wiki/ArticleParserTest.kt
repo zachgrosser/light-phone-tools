@@ -28,7 +28,7 @@ private val LIGHT_PHONE_SECTION = """
 </ol></div></div>
 """.trimIndent()
 
-// A made-up page that exercises the less common cases.
+// Made up, to cover the odd cases.
 private val SYNTHETIC_PAGE = """
 <div class="mw-content-ltr mw-parser-output" lang="en" dir="ltr"><div class="shortdescription nomobile noexcerpt noprint searchaux" style="display:none">Small domesticated mammal</div>
 <!-- a comment with <p>markup</p> in it -->
@@ -187,6 +187,25 @@ class ArticleParserTest {
         assertEquals(listOf("Free content"), notice.linkTargets())
         assertEquals("free content", notice.spanText(notice.spans.first { it.kind == SpanKind.Link }))
         assertTrue(lightPhone.notices.isEmpty())
+    }
+
+    @Test
+    fun `other languages keep their own reference sections, and skip their file and category links`() {
+        val html = """
+            <div class="mw-parser-output"><p>Intro mit <a href="/wiki/Datei:Foto.jpg">Bild</a> und <a href="/wiki/Rhein">Rhein</a>.</p>
+            <div class="mw-heading mw-heading2"><h2>Geschichte</h2></div><p>Text.</p>
+            <div class="mw-heading mw-heading2"><h2>Literatur</h2></div><ul><li>Ein Buch.</li></ul>
+            <div class="mw-heading mw-heading2"><h2>Einzelnachweise</h2></div><ol class="references"><li>Quelle.</li></ol>
+            <div class="klappleiste mw-collapsible navileiste navigation-not-searchable center"><div class="klappleiste-kopf">Städte in Deutschland</div></div>
+            <div class="hintergrundfarbe1 rahmenfarbe1 navigation-not-searchable normdaten-typ-g">Normdaten (Geografikum): GND</div>
+            <div class="mw-heading mw-heading2"><h2>References</h2></div><p>An English heading on German Wikipedia stays.</p></div>
+        """.trimIndent()
+        val article = ArticleParser.parse("Köln", 1, 1, html, Language.German)
+
+        assertEquals("de", article.language)
+        // Everything under Einzelnachweise goes by class, so the section ends up empty.
+        assertEquals(listOf("Geschichte", "Literatur", "References"), article.sections.map { it.title })
+        assertEquals(listOf("Rhein"), article.lead.single().spans.mapNotNull { it.target })
     }
 
     @Test

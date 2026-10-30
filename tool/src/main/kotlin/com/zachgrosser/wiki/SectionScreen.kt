@@ -20,17 +20,13 @@ import com.thelightphone.sdk.ui.LightTopBarCenter
 import com.thelightphone.sdk.ui.gridUnitsAsDp
 import com.thelightphone.sdk.ui.lightClickable
 
-/**
- * One section of an article. Long articles are read a section at a time, which keeps each
- * screen short and makes it easy to jump around from the contents list.
- */
 class SectionScreen(
     sealedActivity: SealedLightActivity,
     private val article: Article,
     startIndex: Int,
 ) : SimpleLightScreen<Unit>(sealedActivity) {
 
-    // Lives on the screen rather than in the composition, so it survives visiting a linked article.
+    // Kept on the screen, not in composition, so it survives a trip to a linked article.
     private var index by mutableIntStateOf(startIndex.coerceIn(0, (article.sections.size - 1).coerceAtLeast(0)))
 
     @Composable
@@ -41,7 +37,7 @@ class SectionScreen(
                 index = index,
                 onBack = { goBack() },
                 onNext = { index += 1 },
-                onOpenArticle = { target -> navigateTo({ ArticleScreen(it, target) }) },
+                onOpenArticle = { target -> navigateTo({ ArticleScreen(it, target, Language.fromCode(article.language)) }) },
             )
         }
     }
@@ -64,7 +60,6 @@ internal fun SectionContent(
             leftButton = backButton(onBack),
             center = LightTopBarCenter.Text(article.title),
         )
-        // A new scroll position for each section.
         key(index) {
             LightScrollView(
                 modifier = Modifier
@@ -80,7 +75,7 @@ internal fun SectionContent(
                 ArticleBlocks(section.blocks, onOpenArticle)
                 if (next != null) {
                     LightText(
-                        text = "Next: ${next.title}",
+                        text = strings().next(next.title),
                         variant = LightTextVariant.Copy,
                         underline = true,
                         modifier = Modifier

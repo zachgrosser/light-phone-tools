@@ -23,4 +23,13 @@ class AttributionTest {
         assertTrue("creativecommons.org/licenses/by-sa/4.0" in credit)
         assertTrue("Changed for this screen" in credit)
     }
+
+    @Test
+    fun `articles from other Wikipedias are credited there, in English`() {
+        assertEquals("de.wikipedia.org/wiki/Köln", Attribution.articleUrl("Köln", Language.German))
+        val credit = Attribution.forArticle("Köln", Language.German)
+        assertTrue("de.wikipedia.org/wiki/Köln" in credit)
+        assertTrue("From the Wikipedia article “Köln” by its contributors" in credit)
+        assertTrue("CC BY-SA 4.0" in credit)
+    }
 }

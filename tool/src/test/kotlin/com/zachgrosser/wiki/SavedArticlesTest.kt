@@ -20,8 +20,9 @@ class SavedArticlesTest {
         dir.deleteRecursively()
     }
 
-    private fun article(title: String, pageId: Long) = Article(
+    private fun article(title: String, pageId: Long, language: String = "en") = Article(
         title = title,
+        language = language,
         pageId = pageId,
         revisionId = 1,
         description = "About $title",
@@ -82,5 +83,23 @@ class SavedArticlesTest {
         val cat = store.find("Cat")
         assertEquals("Cat", cat?.title)
         assertEquals(emptyList(), cat?.notices)
+        assertEquals("en", cat?.language) // saved before languages existed: English
+    }
+
+    @Test
+    fun `the same page id on two Wikipedias are different articles`() = runBlocking {
+        store.save(article("Berlin", 7), aliases = emptyList())
+        store.save(article("Berlin", 7, language = "de"), aliases = emptyList())
+
+        assertEquals(2, store.list().size)
+        assertEquals("de", store.find("Berlin", "de")?.language)
+        assertEquals("en", store.find("Berlin")?.language)
+        assertTrue(File(dir, "saved-articles/7.json").exists())
+        assertTrue(File(dir, "saved-articles/de-7.json").exists())
+
+        store.remove(7, "de")
+        assertFalse(store.isSaved(7, "de"))
+        assertTrue(store.isSaved(7))
+        assertNull(store.find("Berlin", "de"))
     }
 }

@@ -20,29 +20,19 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
-const val WIKI_HOST = "en.wikipedia.org"
-
-/**
- * Wikimedia requires apps to identify themselves, with a way to contact the developer:
- * foundation.wikimedia.org/wiki/Policy:Wikimedia_Foundation_User-Agent_Policy
- */
+// Wikimedia's User-Agent policy asks for a name and a way to get in touch.
 private val USER_AGENT = "LightPhoneWiki/${BuildConfig.VERSION_NAME} (https://${Attribution.SOURCE_CODE_URL})"
 
 class ArticleNotFoundException(val title: String) : Exception("No article called $title")
 
-/**
- * Wikipedia answered "429 Too Many Requests". Wikimedia's API rules require apps to slow down
- * when asked, so Wiki doesn't retry on its own; the reader can try again later.
- */
+// HTTP 429. Wikimedia asks apps to back off, so this is never retried automatically.
 class WikipediaBusyException : Exception("Wikipedia asked for fewer requests")
 
-/** A short, plain explanation of a failed request, for showing on screen. */
-fun errorMessage(error: Throwable): String = when (error) {
-    is WikipediaBusyException -> "Wikipedia is busy right now. Please try again in a minute."
-    else -> "Couldn't reach Wikipedia. Check your connection and try again."
+fun errorMessage(error: Throwable, strings: UiStrings): String = when (error) {
+    is WikipediaBusyException -> strings.busy
+    else -> strings.offline
 }
 
-/** Talks to Wikipedia. One shared HTTP client for the whole tool. */
 object WikiApi {
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -56,9 +46,8 @@ object WikiApi {
         defaultRequest { header(HttpHeaders.UserAgent, USER_AGENT) }
     }
 
-    /** Full-text search, best matches first. */
-    suspend fun search(query: String): Result<List<SearchResult>> = apiCall {
-        val response = client.get("https://$WIKI_HOST/w/rest.php/v1/search/page") {
+    suspend fun search(language: Language, query: String): Result<List<SearchResult>> = apiCall {
+        val response = client.get("https://${language.host}/w/rest.php/v1/search/page") {
             parameter("q", query)
             parameter("limit", 20)
         }
@@ -68,9 +57,8 @@ object WikiApi {
         }
     }
 
-    /** Downloads an article (following redirects) and converts it to plain-text blocks. */
-    suspend fun fetchArticle(title: String): Result<Article> = apiCall {
-        val response = client.get("https://$WIKI_HOST/w/api.php") {
+    suspend fun fetchArticle(language: Language, title: String): Result<Article> = apiCall {
+        val response = client.get("https://${language.host}/w/api.php") {
             parameter("action", "parse")
             parameter("page", title)
             parameter("prop", "text|revid")
@@ -89,7 +77,7 @@ object WikiApi {
         }
         val parsed = checkNotNull(body.parse) { "Wikipedia sent an empty response" }
         withContext(Dispatchers.Default) {
-            ArticleParser.parse(parsed.title, parsed.pageid, parsed.revid, parsed.text)
+            ArticleParser.parse(parsed.title, parsed.pageid, parsed.revid, parsed.text, language)
         }
     }
 
@@ -98,7 +86,7 @@ object WikiApi {
         check(response.status.isSuccess()) { "Wikipedia answered HTTP ${response.status.value}" }
     }
 
-    /** Like runCatching, but lets coroutine cancellation through. */
+    // runCatching, minus swallowing cancellation.
     private suspend fun <T> apiCall(block: suspend () -> T): Result<T> = try {
         Result.success(block())
     } catch (e: CancellationException) {

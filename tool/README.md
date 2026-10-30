@@ -1,77 +1,84 @@
 # Wiki
 
-A Light Phone tool for searching and reading Wikipedia. Settings are in [`lighttool.toml`](lighttool.toml); the code is in [`src/main/kotlin/com/zachgrosser/wiki/`](src/main/kotlin/com/zachgrosser/wiki/).
+Search and read Wikipedia on the Light Phone. Settings are in [`lighttool.toml`](lighttool.toml) and the code is in [`src/main/kotlin/com/zachgrosser/wiki/`](src/main/kotlin/com/zachgrosser/wiki/).
 
 ## What it does
 
-- **Start-up screen** credits Wikipedia and states the CC BY-SA 4.0 license; tap it or start typing to skip.
-- **Search** straight away: Wiki opens on the search box with Light's on-screen keyboard up and saved articles below. Results come from Wikipedia's own search, each with its one-line description.
-- **Read**: the intro, then a contents list; each section opens on its own screen with a "Next" link. Links to other articles are tappable; images, tables, infoboxes and citations are left out.
-- **Save** with the star to read offline. Saved articles open from the phone first, with or without a connection.
-- **About** explains the source, license, accuracy, privacy, trademark and how to give feedback.
+- Opens on a search box with Light's keyboard up and your saved articles underneath. Results come from Wikipedia's own search.
+- Articles show their intro and a contents list. Each section opens on its own screen, with a link to the next one. Links to other articles work; images, tables, infoboxes and citations are left out.
+- The star saves an article for reading offline.
+- Settings (the gear) has the language and an About page covering sources, license, privacy and trademark.
+- The first time Wiki opens, it shows a short credit for Wikipedia and its license.
 
-Wiki only needs the `INTERNET` permission. It has no ads, analytics or tracking, and talks only to `en.wikipedia.org`.
+Wiki only asks for the `INTERNET` permission and only talks to Wikipedia. No ads, analytics or tracking.
 
-## How it works
+## Code
 
-| File | What it does |
+| File | |
 |---|---|
-| `HomeScreen.kt` | Start-up screen; the home screen (search box, saved articles, keyboard); About |
-| `SearchInput.kt` | Typing a search: the search box, Light's on-screen keyboard, hardware keyboards and keypads |
-| `MultiTap.kt` | Letters from a phone keypad: 2 = abc, 3 = def, … |
-| `SearchScreen.kt` | Search results |
-| `ArticleScreen.kt` | An article's intro and contents; saving it |
-| `SectionScreen.kt` | Reading one section |
-| `WikiApi.kt` | Requests to Wikipedia: search (`/w/rest.php/v1/search/page`) and articles (`/w/api.php?action=parse`) |
-| `ArticleParser.kt` | Turns Wikipedia's HTML into plain-text blocks with links, bold and italics |
-| `SavedArticles.kt` | Saves articles as JSON files in the tool's private storage |
-| `Attribution.kt` | Every credit, license, trademark and privacy line the tool shows |
-| `Models.kt` | The data: articles, sections, blocks, search results |
-| `WikiUi.kt` | Shared look: theme, text styles, article blocks, credits |
-| `WikiPreviews.kt` | Android Studio previews of every screen at Light Phone III and Light Flip sizes |
+| `HomeScreen.kt` | Search box, saved articles, first-launch credits |
+| `SearchInput.kt` | The search box and the three ways of typing into it |
+| `MultiTap.kt` | Keypad typing (2 = abc, 3 = def…) |
+| `SearchScreen.kt` | Results |
+| `ArticleScreen.kt`, `SectionScreen.kt` | Reading |
+| `SettingsScreen.kt` | Settings, language list, About |
+| `WikiApi.kt` | Search (`/w/rest.php/v1/search/page`) and articles (`/w/api.php?action=parse`) |
+| `ArticleParser.kt` | Wikipedia HTML to plain-text blocks |
+| `SavedArticles.kt` | Saved articles, as JSON in the tool's private storage |
+| `Attribution.kt` | Credit, license and trademark text |
+| `Language.kt`, `LanguageSetting.kt` | Languages and the translated text |
+| `Models.kt` | Data classes |
+| `WikiUi.kt` | Theme, text styles, article blocks, credits |
+| `WikiPreviews.kt` | Android Studio previews at Light Phone III and Light Flip sizes |
 
-`ArticleParser` is the part most likely to need care. It keeps paragraphs, headings, lists, quotes and "Main article:" notes. It skips anything that doesn't suit a small text-only screen: images, tables, infoboxes, navigation boxes and citation markers. It also leaves out the reference sections (References, Notes, Sources, External links and so on), but keeps any credit notice found there for imported text (see below). Formulas become readable text, and superscript and subscript numbers become ² and ₂. Its tests use a real section of the "Light Phone" article plus a made-up page full of edge cases.
+`ArticleParser` is the fiddly part. It drops anything that doesn't suit a small text-only screen, mostly by HTML class. On English Wikipedia it also drops the reference sections (References, External links and so on), but keeps any "This article incorporates text from…" notice it finds there, since Wikimedia asks reusers to keep those. The tests use a real section of the "Light Phone" article and a made-up page full of edge cases.
 
-## Keyboards
+## Typing
 
-The home screen is ready to type into as soon as it appears, whichever way the phone types:
+- **Light Phone III:** Light's on-screen keyboard is up from the start.
+- **Bluetooth or USB keyboard:** typing goes straight into the search box and Enter searches. The on-screen keyboard gets out of the way after the first key; tap the search box to bring it back.
+- **Phone keypad:** multi-tap, like older phones. Press 2 once for "a", twice for "b", hold for "2". 0 is a space.
 
-- **Light Phone III:** Light's own on-screen keyboard (from the SDK) is up from the start. Return or the search button searches.
-- **A Bluetooth or USB keyboard:** typing goes straight into the search box; Enter searches, Backspace deletes. After the first key, the on-screen keyboard steps aside so more saved articles fit; tapping the search box brings it back.
-- **A phone keypad (Light Flip):** the digit keys type letters by multi-tap, as on older phones: press 2 once for "a", twice for "b"; pause (or press another key) to move on; hold a key for its digit; 0 is a space and 1 is punctuation.
+`HardwareTyping` in `SearchInput.kt` grabs typing keys before Light's keyboard sees them, so nothing gets typed twice, and leaves every other key (volume, the Light Phone III's buttons) to LightOS.
 
-`HardwareTyping` (in `SearchInput.kt`) handles all hardware keys. It takes typing keys before Light's on-screen keyboard sees them, so nothing is typed twice, and leaves every other key (volume, the Light Phone III's buttons) to LightOS.
+The Light Flip isn't out yet and Light hasn't said how its keypad reaches tools. Wiki assumes it reports itself as a 12-key keypad and sends digits, like Android keypad phones do. Worth checking once Light publishes Flip support, along with whether it has a touchscreen.
 
-**The Light Flip isn't out yet,** and Light hasn't said how its keypad reaches tools. Wiki assumes what Android phones with keypads do: the keypad reports itself as a 12-key keypad and sends digits. If LightOS turns presses into letters itself instead, Wiki types those like any other keyboard. Its multi-tap code only runs for 12-key keypads, so nothing else is affected. When Light publishes Flip support (or a Flip emulator), check this, and whether the Flip has a touchscreen: without one, results and links would need the keypad's arrow keys too.
+## Languages
+
+English, Spanish, French, German, Italian, Portuguese, Dutch and Swedish. One setting changes both Wiki's text and which Wikipedia it uses. Only Latin-alphabet languages, because that's all Light's keyboard can type. Wikipedia's search ignores most accents, so "Koln" finds Köln.
+
+- The translations live in `Language.kt` rather than Android string resources, since switching an app's language needs a `Context` and Light doesn't give tools one.
+- Credits, license, trademark and privacy text stay in English so the wording is exactly what Wikimedia's rules ask for. Each article's credit links to the Wikipedia it came from.
+- Articles keep their language. Links open on the same Wikipedia, and saved articles from another language are marked, as in "Berlin (de)". Anything saved before 1.1 is English.
+- On other Wikipedias the reference sections stay in, because the parser only recognises imported-text notices in English and dropping one isn't allowed.
+- The translations still need a native speaker's review.
 
 ## Attribution and Wikipedia's rules
 
-Wikipedia's text is free to reuse under **CC BY-SA 4.0**, with conditions. Here is how Wiki meets each one, and where the rule comes from:
+Wikipedia's text can be reused under CC BY-SA 4.0, with conditions. This is how Wiki meets each one. I'm not a lawyer; it's my reading of the rules. Check the sources before changing anything in `Attribution.kt`.
 
-| Requirement | Where it comes from | How Wiki meets it |
+| Requirement | Source | How |
 |---|---|---|
-| Credit the authors: a link or URL to the article (its history lists everyone who wrote it) | [Reusing Wikipedia content](https://en.wikipedia.org/wiki/Wikipedia:Reusing_Wikipedia_content); [Terms of Use §7](https://foundation.wikimedia.org/wiki/Policy:Terms_of_Use) | The end of every article and section names the article and gives its address (written out, since the phone has no browser) |
-| Name the license and give its URL | [CC BY-SA 4.0 §3(a)](https://creativecommons.org/licenses/by-sa/4.0/legalcode.en); reuse policy | Every article's credit; the start-up screen; About |
-| Say if the text was changed | CC BY-SA 4.0 §3(a)(1)(B); Terms of Use §7 | "Changed for this screen: images, tables, citations and some formatting are left out." |
-| Keep notices for text imported from other sources | Terms of Use §7 ("reusers should preserve them") | `ArticleParser` keeps "This article incorporates text from…" notices, which Wikipedia shows under Sources or References, and the article screen shows them |
-| Refer to the disclaimer of warranties | CC BY-SA 4.0 §3(a)(1)(A)(iv) | About links to [Wikipedia's general disclaimer](https://en.wikipedia.org/wiki/Wikipedia:General_disclaimer) |
-| Use "Wikipedia" only to describe the content, without implying endorsement; notice near first use, or ™ where space is short with the full notice on an About screen | [Trademark Policy §2.2 and §3.6](https://foundation.wikimedia.org/wiki/Policy:Trademark_policy) | The name is "Wiki", with no logos. The start-up screen says "Wikipedia™" and "Not affiliated with or endorsed by the Wikimedia Foundation"; About has the policy's notice wording |
-| Identify the app to Wikipedia's servers, with contact details | [User-Agent Policy](https://foundation.wikimedia.org/wiki/Policy:Wikimedia_Foundation_User-Agent_Policy) | `LightPhoneWiki/<version> (https://github.com/zachgrosser/light-phone-tools)` |
-| Slow down when asked; don't hide that Wikimedia provides the service | [API Usage Guidelines](https://foundation.wikimedia.org/wiki/Policy:Wikimedia_Foundation_API_Usage_Guidelines) | One request per tap; on "429 Too Many Requests" Wiki tells the reader and doesn't retry; About says the Wikimedia Foundation runs Wikipedia |
-| Disclose data that leaves the phone | Light's [Tool Guidelines](../TOOL_GUIDELINES.md); Wikimedia's [Privacy Policy](https://foundation.wikimedia.org/wiki/Policy:Privacy_policy) | About says what the Wikimedia Foundation receives (searches, articles opened, IP address) and links its privacy policy |
+| Credit the authors with a link to the article (its history lists them) | [Reusing Wikipedia content](https://en.wikipedia.org/wiki/Wikipedia:Reusing_Wikipedia_content), [Terms of Use §7](https://foundation.wikimedia.org/wiki/Policy:Terms_of_Use) | Every article and section ends with the article's name and address, written out since there's no browser |
+| Name the license and link it | [CC BY-SA 4.0 §3(a)](https://creativecommons.org/licenses/by-sa/4.0/legalcode.en) | Every article's credit, the first-launch screen and About |
+| Say the text was changed | CC BY-SA 4.0 §3(a)(1)(B), Terms of Use §7 | "Changed for this screen: images, tables, citations and some formatting are left out." |
+| Keep notices for text imported from elsewhere | Terms of Use §7 | Kept by the parser and shown at the end of the article |
+| Point to the disclaimer of warranties | CC BY-SA 4.0 §3(a)(1)(A)(iv) | About links [Wikipedia's general disclaimer](https://en.wikipedia.org/wiki/Wikipedia:General_disclaimer) |
+| Use "Wikipedia" only to describe the content; ™ at first use on small screens, full notice elsewhere | [Trademark Policy §2.2, §3.6](https://foundation.wikimedia.org/wiki/Policy:Trademark_policy) | The tool is called "Wiki" and has no logos. The first-launch screen says "Wikipedia™" and "Not affiliated with or endorsed by the Wikimedia Foundation"; About has the full notice |
+| Identify the app, with contact details | [User-Agent Policy](https://foundation.wikimedia.org/wiki/Policy:Wikimedia_Foundation_User-Agent_Policy) | `LightPhoneWiki/<version> (https://github.com/zachgrosser/light-phone-tools)` |
+| Back off when asked | [API Usage Guidelines](https://foundation.wikimedia.org/wiki/Policy:Wikimedia_Foundation_API_Usage_Guidelines) | One request per tap. On HTTP 429 Wiki says so and doesn't retry |
+| Disclose data that leaves the phone | Light's [Tool Guidelines](../TOOL_GUIDELINES.md), [Wikimedia Privacy Policy](https://foundation.wikimedia.org/wiki/Policy:Privacy_policy) | About says what Wikimedia receives (searches, articles opened, IP address) and links its privacy policy |
 
-The wording lives in `Attribution.kt`, with the same sources noted at the top. **Check these sources before changing it.** We're not lawyers, and this is our reading of the rules, not legal advice.
+The same rules and license cover every language's Wikipedia.
 
-Not covered: images (never shown), and non-English Wikipedias (Wiki uses English Wikipedia only).
-
-## Testing
+## Tests
 
 ```bash
 ./gradlew :tool:testDebugUnitTest -DlightSdk.toolOnly=true
 ```
 
-See [DEVELOPING.md](../DEVELOPING.md) for the emulator, previews and installing on a phone.
+[DEVELOPING.md](../DEVELOPING.md) covers the emulator, previews and getting a build onto a phone.
 
 ## License
 
-The code in this folder is under the [MIT License](LICENSE). Wikipedia text displayed by the tool belongs to its authors under CC BY-SA 4.0.
+MIT, see [LICENSE](LICENSE). Wikipedia's text belongs to its authors and is CC BY-SA 4.0.
