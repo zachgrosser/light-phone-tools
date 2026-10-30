@@ -1,22 +1,16 @@
 package com.zachgrosser.wiki
 
-/**
- * Multi-tap typing for a phone keypad (2 = abc, 3 = def, …), for phones like the Light Flip whose
- * keypad sends digits. Press a key once for its first letter; press it again within
- * [timeoutMillis] to change that letter to the next one. Hold a key to type its digit.
- *
- * This is plain logic so it can be tested without a phone: the caller passes each key press and
- * where the cursor is, and applies the returned [Edit] to the text.
- */
+// Old-school keypad typing (2 = abc, 3 = def…) for keypads that send digits, like the Light Flip's
+// probably will. Pressing the same key again quickly cycles the letter; holding it types the digit.
+// No Android code in here, so it can be unit tested.
 internal class MultiTap(private val timeoutMillis: Long = DEFAULT_TIMEOUT_MILLIS) {
 
     sealed interface Edit {
         val char: Char
 
-        /** Type [char] at the cursor. */
         data class Insert(override val char: Char) : Edit
 
-        /** Change the character just before the cursor (the letter the last press typed) to [char]. */
+        // Swap the character before the cursor (the letter the last press typed).
         data class Replace(override val char: Char) : Edit
     }
 
@@ -25,10 +19,9 @@ internal class MultiTap(private val timeoutMillis: Long = DEFAULT_TIMEOUT_MILLIS
     private var letterIndex = 0
     private var lastPressCycled = false
 
-    /** Where the cursor was after the last edit. If it has moved since, the next press starts a new letter. */
+    // If the cursor has moved since, the next press starts a new letter.
     private var cursorAfterEdit = NONE
 
-    /** A key was pressed at [timeMillis] (any steady clock) with the cursor at [cursor]. */
     fun press(digit: Int, timeMillis: Long, cursor: Int): Edit {
         val letters = lettersFor(digit)
         val cycling = digit == lastDigit &&
@@ -48,11 +41,8 @@ internal class MultiTap(private val timeoutMillis: Long = DEFAULT_TIMEOUT_MILLIS
         }
     }
 
-    /**
-     * The key just pressed is being held down: type its digit instead of what that press did.
-     * If the press started a new letter, the digit takes its place; if it changed the previous
-     * letter (2, 2, hold 2), that letter goes back and the digit follows it ("b2").
-     */
+    // The last key is being held: swap what it typed for its digit. After 2, 2, hold 2 that's
+    // "b2", not "2".
     fun hold(digit: Int, cursor: Int): List<Edit> {
         val digitChar = '0' + digit
         val afterThisKey = digit == lastDigit && cursor == cursorAfterEdit
@@ -70,7 +60,6 @@ internal class MultiTap(private val timeoutMillis: Long = DEFAULT_TIMEOUT_MILLIS
         }
     }
 
-    /** Something else changed the text; the next press starts a new letter. */
     fun reset() {
         lastDigit = NONE
         cursorAfterEdit = NONE
@@ -80,7 +69,7 @@ internal class MultiTap(private val timeoutMillis: Long = DEFAULT_TIMEOUT_MILLIS
         const val DEFAULT_TIMEOUT_MILLIS = 1_000L
         private const val NONE = -1
 
-        /** The characters each key cycles through, ending with its digit (as on most phones). */
+        // Each key ends its cycle on its own digit, like most phones.
         private val KEYPAD = listOf(
             " 0", ".,'-?!1", "abc2", "def3", "ghi4", "jkl5", "mno6", "pqrs7", "tuv8", "wxyz9",
         )

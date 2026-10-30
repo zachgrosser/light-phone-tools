@@ -1,53 +1,35 @@
 # light-phone-tools
 
-Tools for the **Light Phone III**, built on [Light's official SDK](https://github.com/lightphone/light-sdk).
+Tools for the Light Phone III, built on [Light's SDK](https://github.com/lightphone/light-sdk).
 
 ## Wiki
 
-Search and read Wikipedia on the Light Phone. Articles appear as clean text, one section at a time, with tappable links between them. Star an article to read it offline.
+Search and read Wikipedia on the Light Phone, one section at a time, with working links between articles. Star an article to keep it for offline reading. Available in eight languages.
 
-- A start-up screen credits Wikipedia and its CC BY-SA 4.0 license, and every article ends with its source, license and what was changed.
-- No ads, analytics or tracking. Saved articles stay on the phone.
-- Works on the Light Phone III's screen and adapts to smaller ones like the Light Flip's.
+No ads, analytics or tracking, and saved articles stay on the phone. Every article ends with its source and license. [`tool/README.md`](../tool/README.md) has the details, including how it follows Wikipedia's reuse rules.
 
-How it works, and why its attribution reads the way it does: [`tool/README.md`](../tool/README.md).
+## Docs
 
-## Where to start
+- [DEVELOPING.md](../DEVELOPING.md): setting up, the emulator, tests
+- [COLLABORATING.md](../COLLABORATING.md): branches, pull requests, reviews
+- [SUBMITTING.md](../SUBMITTING.md): sending a version to Light
+- Light's [TOOL_GUIDELINES.md](../TOOL_GUIDELINES.md), [README](../README.md) and [docs](../docs)
 
-| I want to… | Read |
-|---|---|
-| Set up my computer, run Wiki on the emulator, run the tests | [DEVELOPING.md](../DEVELOPING.md) |
-| Work on this with others (branches, pull requests, reviews) | [COLLABORATING.md](../COLLABORATING.md) |
-| Send Wiki to Light for their Tool Library | [SUBMITTING.md](../SUBMITTING.md) |
-| Know what Light accepts | Light's [TOOL_GUIDELINES.md](../TOOL_GUIDELINES.md) |
-| Understand the SDK itself | Light's [README](../README.md) and [docs](../docs) |
+## Layout
 
-## What's in this repo
+This is a copy of Light's SDK with Wiki added. Everything outside these is Light's and gets updated from their repo, so don't edit it here:
 
-This repo is a copy of Light's SDK with our tool added. **Our code lives in `tool/`**; everything else comes from Light and is updated from their repo.
+- `tool/`: Wiki
+- `scripts/emulator.sh`: sets up and runs Light's emulator on a Mac
+- `.github/`: this page, the Tool workflow, PR and issue templates
+- `DEVELOPING.md`, `COLLABORATING.md`, `SUBMITTING.md`
 
-| Folder / file | What it is | Do we edit it? |
-|---|---|---|
-| `tool/` | **Wiki**: its code, tests, settings (`lighttool.toml`) and license | ✅ Yes |
-| `scripts/emulator.sh` | Sets up and runs Light's emulator on a Mac | ✅ Yes |
-| `.github/` | This page, our build workflow, pull request and issue templates | ✅ Yes |
-| `DEVELOPING.md`, `COLLABORATING.md`, `SUBMITTING.md` | Our guides | ✅ Yes |
-| `CLAUDE.md` | Notes Claude Code reads at the start of every session (also a good summary for people) | ✅ Yes |
-| `examples/` | Light's sample tools (weather, authenticator, …) | 👀 Read for ideas |
-| `docs/`, `README.md`, `TOOL_GUIDELINES.md`, `CONTRIBUTING.md` | Light's documentation | 👀 Read |
-| `sdk/`, `plugin/`, `lint-rules/`, `builder/`, `signer/`, … | The SDK itself | ❌ No, it comes from Light |
+Light's `examples/` folder is worth a look for how their own tools are put together.
 
-> GitHub shows this file (`.github/README.md`) as the front page instead of Light's README, so updates from Light never clash with it.
+This file sits in `.github/` so GitHub shows it instead of Light's README, and their updates never clash with it.
 
 ## Licenses
 
-- Wiki's code (`tool/`): [MIT](../tool/LICENSE).
-- Light's SDK (everything else): [MIT](../LICENSE), © The Light Phone.
-- Wikipedia article text shown by Wiki: [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), by Wikipedia's contributors.
+Wiki (`tool/`) is [MIT](../tool/LICENSE). Light's SDK is [MIT](../LICENSE), © The Light Phone. Wikipedia text shown in Wiki is [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), by Wikipedia's contributors.
 
-Wikipedia is a trademark of the Wikimedia Foundation. This project is not endorsed by or affiliated with the Wikimedia Foundation or with Light.
-
-## Who's working on this
-
-- [@zachgrosser](https://github.com/zachgrosser)
-- *(add your name here in your first pull request)*
+Wikipedia is a trademark of the Wikimedia Foundation. This project isn't endorsed by or affiliated with the Wikimedia Foundation or Light.

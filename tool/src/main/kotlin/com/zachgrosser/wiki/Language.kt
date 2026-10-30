@@ -1,25 +1,12 @@
 package com.zachgrosser.wiki
 
-/**
- * The languages Wiki can be used in. Picking one changes both Wiki's own text and the Wikipedia
- * it searches (es.wikipedia.org and so on). English is the default.
- *
- * Only languages written in the Latin alphabet are offered, because Light's on-screen keyboard
- * only has Latin layouts. Credits, license, trademark and privacy text stay in English whatever
- * the language (see Attribution), so their wording stays exactly as Wikimedia's rules require.
- *
- * The translations were drafted without a native speaker's review; see tool/README.md.
- */
+// Latin-alphabet languages only, since that's all Light's keyboard can type.
 enum class Language(
     val code: String,
-    /** The language's name in itself, as people who speak it would look for it. */
     val nativeName: String,
     val englishName: String,
     val strings: UiStrings,
-    /**
-     * Wikipedia's local names for pages that aren't articles (files, categories…), as they appear
-     * in links: "/wiki/Datei:…". Links to them are left as plain text, like the English ones.
-     */
+    // Local names for non-article pages ("Datei:", "Kategorie:"), so links to them aren't followed.
     val namespaces: Set<String> = emptySet(),
 ) {
     English("en", "English", "English", ENGLISH),
@@ -53,19 +40,16 @@ enum class Language(
     ),
     ;
 
-    /** This language's Wikipedia, such as "de.wikipedia.org". */
     val host: String get() = "$code.wikipedia.org"
 
     companion object {
-        /** The language with this code, or English for anything unknown (such as a missing setting). */
         fun fromCode(code: String?): Language = entries.firstOrNull { it.code == code } ?: English
     }
 }
 
-/** Wiki's own text (not Wikipedia's, and not the credits) in one language. */
+// Wiki's own text. Credits and About's policies stay in English (see Attribution).
 class UiStrings(
-    /** The top bar button that opens About. Short, and in capitals like Light's own buttons. */
-    val aboutButton: String,
+    val settings: String,
     val about: String,
     val aboutIntro: String,
     val language: String,
@@ -90,7 +74,7 @@ class UiStrings(
 )
 
 private val ENGLISH = UiStrings(
-    aboutButton = "ABOUT",
+    settings = "Settings",
     about = "About",
     aboutIntro = "Wiki lets you search and read Wikipedia on your Light Phone. Read an article a " +
         "section at a time, follow its links, and star it to read it offline.",
@@ -116,7 +100,7 @@ private val ENGLISH = UiStrings(
 )
 
 private val SPANISH = UiStrings(
-    aboutButton = "INFO",
+    settings = "Ajustes",
     about = "Acerca de",
     aboutIntro = "Wiki te permite buscar y leer Wikipedia en tu Light Phone. Lee un artículo " +
         "sección por sección, sigue sus enlaces y márcalo con la estrella para leerlo sin conexión.",
@@ -141,9 +125,9 @@ private val SPANISH = UiStrings(
     savedStillReadable = "Los artículos guardados se pueden seguir leyendo sin conexión.",
 )
 
-// French puts a no-break space before ":" and inside « ».
+// French takes a no-break space before ":" and inside « ».
 private val FRENCH = UiStrings(
-    aboutButton = "À PROPOS",
+    settings = "Paramètres",
     about = "À propos",
     aboutIntro = "Wiki vous permet de chercher et de lire Wikipédia sur votre Light Phone. Lisez un " +
         "article section par section, suivez ses liens et ajoutez-lui une étoile pour le lire hors connexion.",
@@ -169,7 +153,7 @@ private val FRENCH = UiStrings(
 )
 
 private val GERMAN = UiStrings(
-    aboutButton = "INFO",
+    settings = "Einstellungen",
     about = "Info",
     aboutIntro = "Mit Wiki kannst du Wikipedia auf deinem Light Phone durchsuchen und lesen. Lies einen " +
         "Artikel Abschnitt für Abschnitt, folge seinen Links und markiere ihn mit dem Stern, um ihn offline zu lesen.",
@@ -195,7 +179,7 @@ private val GERMAN = UiStrings(
 )
 
 private val ITALIAN = UiStrings(
-    aboutButton = "INFO",
+    settings = "Impostazioni",
     about = "Informazioni",
     aboutIntro = "Wiki ti permette di cercare e leggere Wikipedia sul tuo Light Phone. Leggi un " +
         "articolo una sezione alla volta, segui i suoi link e aggiungi una stella per leggerlo offline.",
@@ -220,9 +204,9 @@ private val ITALIAN = UiStrings(
     savedStillReadable = "Gli articoli salvati si possono comunque leggere offline.",
 )
 
-// Brazilian Portuguese, the most widely used form on pt.wikipedia.org.
+// Brazilian Portuguese.
 private val PORTUGUESE = UiStrings(
-    aboutButton = "SOBRE",
+    settings = "Configurações",
     about = "Sobre",
     aboutIntro = "Com o Wiki, você pode pesquisar e ler a Wikipédia no seu Light Phone. Leia um artigo " +
         "uma seção de cada vez, siga os links e marque-o com a estrela para ler offline.",
@@ -248,7 +232,7 @@ private val PORTUGUESE = UiStrings(
 )
 
 private val DUTCH = UiStrings(
-    aboutButton = "INFO",
+    settings = "Instellingen",
     about = "Info",
     aboutIntro = "Met Wiki kun je Wikipedia doorzoeken en lezen op je Light Phone. Lees een artikel " +
         "per sectie, volg de links en geef het een ster om het offline te lezen.",
@@ -274,8 +258,8 @@ private val DUTCH = UiStrings(
 )
 
 private val SWEDISH = UiStrings(
-    aboutButton = "OM",
-    about = "Om",
+    settings = "Inställningar",
+    about = "Om Wiki",
     aboutIntro = "Med Wiki kan du söka och läsa Wikipedia på din Light Phone. Läs en artikel ett " +
         "avsnitt i taget, följ länkarna och stjärnmärk den för att läsa den offline.",
     language = "Språk",

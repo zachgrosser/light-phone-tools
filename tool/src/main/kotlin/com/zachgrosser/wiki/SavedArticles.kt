@@ -8,22 +8,18 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
 
-/**
- * Articles saved for offline reading. Each one is a JSON file in the tool's private storage,
- * plus a small index so the list can be shown without reading every article. Articles from
- * different Wikipedias are told apart by their language, since page ids are only unique within one.
- */
+// One JSON file per article, plus an index for the list. Page ids are only unique within one
+// Wikipedia, so entries are keyed by language too.
 class SavedArticles(filesDir: File) {
 
     private val directory = File(filesDir, "saved-articles")
     private val indexFile = File(directory, "index.json")
 
-    /** Most recently saved first. */
     suspend fun list(): List<SavedArticle> = locked {
         readIndex().sortedByDescending { it.savedAtMillis }
     }
 
-    /** Finds a saved article by its title or by a title that redirected to it. */
+    // Matches the title or any title that redirected to it.
     suspend fun find(title: String, language: String = Language.English.code): Article? = locked {
         val key = normalize(title)
         val entry = readIndex().firstOrNull { saved ->
@@ -58,7 +54,7 @@ class SavedArticles(filesDir: File) {
         writeIndex(readIndex().filterNot { it.pageId == pageId && it.language == language })
     }
 
-    // English articles keep the names they had before other languages were added.
+    // English files keep their pre-1.1 names.
     private fun articleFile(language: String, pageId: Long) =
         File(directory, if (language == Language.English.code) "$pageId.json" else "$language-$pageId.json")
 
@@ -73,7 +69,6 @@ class SavedArticles(filesDir: File) {
         writeAtomically(indexFile, json.encodeToString(SavedIndex.serializer(), SavedIndex(articles)))
     }
 
-    /** Writes to a temporary file first so a crash can't leave a half-written file behind. */
     private fun writeAtomically(target: File, content: String) {
         val temp = File(target.parentFile, "${target.name}.tmp")
         temp.writeText(content)
@@ -90,7 +85,7 @@ class SavedArticles(filesDir: File) {
         private val lock = Mutex()
         private val json = Json { ignoreUnknownKeys = true }
 
-        /** Wikipedia titles ignore the case of the first letter and treat "_" as a space. */
+        // Wikipedia ignores the case of the first letter and treats "_" as a space.
         fun normalize(title: String): String =
             title.replace('_', ' ').trim().replaceFirstChar { it.uppercaseChar() }
     }

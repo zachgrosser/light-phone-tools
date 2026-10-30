@@ -45,10 +45,8 @@ import com.thelightphone.sdk.ui.designVerticalPxToDp
 import com.thelightphone.sdk.ui.gridUnitsAsDp
 import com.thelightphone.sdk.ui.keyboard.LightEmbeddedLp3Keyboard
 
-// Typing a search. Three ways in, all editing the same TextFieldState:
-//  - Light's on-screen keyboard (SearchKeyboard, SearchKeyboardCallback)
-//  - a hardware keyboard, such as a Bluetooth or USB one (HardwareTyping)
-//  - a phone keypad that sends digits, like the Light Flip's (HardwareTyping + MultiTap)
+// Three ways to type into the same TextFieldState: Light's on-screen keyboard, a hardware
+// keyboard, or a phone keypad (multi-tap).
 
 private const val UNDERLINE_THICKNESS_PX = 3f
 
@@ -59,11 +57,7 @@ fun searchButton(onSearch: () -> Unit) = LightBarButton.LightIcon(
     contentDescription = strings().search,
 )
 
-/**
- * The search box: what's been typed, with a cursor, on one line that scrolls to keep the cursor in
- * view. Typing arrives from a keyboard, not from the box itself. Tapping it moves the cursor and
- * calls [onTap].
- */
+// Not a text field: typing comes from the keyboards. Tapping just moves the cursor.
 @Composable
 internal fun SearchBox(state: TextFieldState, onTap: () -> Unit, modifier: Modifier = Modifier) {
     val colors = LightThemeTokens.colors
@@ -76,7 +70,6 @@ internal fun SearchBox(state: TextFieldState, onTap: () -> Unit, modifier: Modif
     val cursor = state.selection.min.coerceIn(0, state.text.length)
     val cursorWidth = 2.dp
 
-    // Keep the cursor in view as the text grows past the width of the box.
     LaunchedEffect(cursor, layout, viewportWidth) {
         val textLayout = layout ?: return@LaunchedEffect
         if (isEmpty || viewportWidth == 0) {
@@ -116,7 +109,7 @@ internal fun SearchBox(state: TextFieldState, onTap: () -> Unit, modifier: Modif
                     onTextLayout = { layout = it },
                 )
                 layout?.let { textLayout ->
-                    // The layout can lag a keystroke behind the text, so keep the cursor within it.
+                    // The layout can be a keystroke behind the text.
                     val rect = textLayout.getCursorRect(
                         if (isEmpty) 0 else cursor.coerceAtMost(textLayout.layoutInput.text.length),
                     )
@@ -140,7 +133,6 @@ internal fun SearchBox(state: TextFieldState, onTap: () -> Unit, modifier: Modif
     }
 }
 
-/** Light's on-screen keyboard, with a search button below it. */
 @Composable
 internal fun SearchKeyboard(keyboard: Lp3KeyboardViewModel<*>, onSearch: () -> Unit) {
     LightEmbeddedLp3Keyboard(
@@ -150,10 +142,7 @@ internal fun SearchKeyboard(keyboard: Lp3KeyboardViewModel<*>, onSearch: () -> U
     )
 }
 
-/**
- * Connects Light's on-screen keyboard to the search box. Adapted from the Light SDK's
- * TextInputKeyboardCallback (MIT License), which tools can't use directly.
- */
+// Adapted from the SDK's TextInputKeyboardCallback (MIT), which tools can't use directly.
 internal class SearchKeyboardCallback(
     private val state: TextFieldState,
     private val onSearch: () -> Unit,
@@ -192,12 +181,8 @@ internal class SearchKeyboardCallback(
     override fun onSubmitWord(word: CharSequence) = state.insertAtCursor(word.toString())
 }
 
-/**
- * Typing on hardware: a Bluetooth or USB keyboard, or a phone keypad like the Light Flip's, whose
- * digit keys type letters by [MultiTap]. Characters go straight into the search box; Enter
- * searches; Delete (Backspace) deletes. Other keys (volume, the Light Phone III's buttons, and so
- * on) are left for LightOS.
- */
+// Bluetooth/USB keyboards and phone keypads. Anything that isn't for typing (volume, the Light
+// Phone III's buttons) is left for LightOS.
 internal class HardwareTyping(
     private val state: TextFieldState,
     private val onSearch: () -> Unit,
@@ -214,10 +199,8 @@ internal class HardwareTyping(
 
     fun isTypingKey(event: KeyEvent): Boolean = classify(event) != null
 
-    /**
-     * Acts on a key press and returns true if [event] is a typing key. Its key release also returns
-     * true, so that nothing else (such as Light's keyboard, which types on release) handles it too.
-     */
+    // Claims the key up as well as the key down. Light's keyboard types on key up, so otherwise
+    // every character would arrive twice.
     fun onKeyEvent(event: KeyEvent): Boolean {
         val key = classify(event) ?: return false
         if (event.action != KeyEvent.ACTION_DOWN) return true
@@ -238,7 +221,7 @@ internal class HardwareTyping(
             is Key.Keypad -> when (event.repeatCount) {
                 0 -> applyEdit(multiTap.press(key.digit, event.eventTime, state.selection.min))
                 1 -> multiTap.hold(key.digit, state.selection.min).forEach(::applyEdit)
-                else -> Unit // still held; the digit is already typed
+                else -> Unit
             }
         }
         return true
@@ -250,8 +233,7 @@ internal class HardwareTyping(
     }
 
     private fun classify(event: KeyEvent): Key? {
-        // On LightOS, some keys on external keyboards arrive disguised as the Light Phone III's
-        // own buttons; Light's keyboard library undoes that, and so do we.
+        // LightOS remaps some external keyboard keys to the Light Phone III's buttons. Undo that.
         val keyCode = lightOsRemap(event)
         val fromKeypad = event.isFromPhoneKeypad()
         return when {
@@ -259,7 +241,7 @@ internal class HardwareTyping(
             keyCode == KeyEvent.KEYCODE_ENTER || keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER -> Key.Search
             fromKeypad && keyCode in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 ->
                 Key.Keypad(keyCode - KeyEvent.KEYCODE_0)
-            // * and # mean different things on different phones; leave them to LightOS.
+            // * and # vary by phone, so leave them alone.
             fromKeypad -> null
             event.isCtrlPressed || event.isMetaPressed -> null
             else -> printableText(event, keyCode)?.let { Key.Text(it) }
@@ -277,7 +259,6 @@ internal class HardwareTyping(
         return String(Character.toChars(codePoint))
     }
 
-    /** A 12-key phone keypad, rather than a full keyboard. */
     private fun KeyEvent.isFromPhoneKeypad(): Boolean =
         when (runCatching { keyCharacterMap.keyboardType }.getOrNull()) {
             KeyCharacterMap.NUMERIC, KeyCharacterMap.PREDICTIVE -> true
@@ -285,7 +266,6 @@ internal class HardwareTyping(
         }
 }
 
-// --- Text edits shared by all three ---------------------------------------------------------
 
 internal fun TextFieldState.insertAtCursor(text: String) = edit {
     val start = selection.min
@@ -293,7 +273,6 @@ internal fun TextFieldState.insertAtCursor(text: String) = edit {
     selection = TextRange(start + text.length)
 }
 
-/** Replaces the character before the cursor with [char] (or types it, at the very start). */
 internal fun TextFieldState.replaceBeforeCursor(char: Char) = edit {
     val end = selection.min
     if (end == 0) {
@@ -314,7 +293,7 @@ internal fun TextFieldState.deleteBeforeCursor() = edit {
     }
     val end = selection.min
     if (end == 0) return@edit
-    // Delete a whole emoji or other character made of two UTF-16 units.
+    // Surrogate pairs (most emoji) are two chars.
     val count = if (end >= 2 && Character.isLowSurrogate(charAt(end - 1))) 2 else 1
     delete(end - count, end)
     selection = TextRange(end - count)

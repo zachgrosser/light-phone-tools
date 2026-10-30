@@ -14,7 +14,7 @@ class LanguageTest {
 
     @AfterTest
     fun cleanUp() {
-        runBlocking { LanguageSetting.choose(dir, Language.English) }
+        runBlocking { LanguageSetting.choose(dir, Language.English).join() }
         dir.deleteRecursively()
     }
 
@@ -37,7 +37,7 @@ class LanguageTest {
         for (language in Language.entries) {
             val s = language.strings
             val fixed = listOf(
-                s.aboutButton, s.about, s.aboutIntro, s.language, s.saved, s.savedHint,
+                s.settings, s.about, s.aboutIntro, s.language, s.saved, s.savedHint,
                 s.searchPlaceholder, s.search, s.back, s.loading, s.searching, s.contents,
                 s.savedForOffline, s.removedFromSaved, s.saveAction, s.removeAction,
                 s.busy, s.offline, s.savedStillReadable,
@@ -52,9 +52,9 @@ class LanguageTest {
     @Test
     fun `the language setting is remembered`() = runBlocking {
         LanguageSetting.load(dir)
-        assertEquals(Language.English, LanguageSetting.current.value) // nothing chosen yet
+        assertEquals(Language.English, LanguageSetting.current.value)
 
-        LanguageSetting.choose(dir, Language.Dutch)
+        LanguageSetting.choose(dir, Language.Dutch).join()
         LanguageSetting.load(dir)
         assertEquals(Language.Dutch, LanguageSetting.current.value)
         assertEquals("nl", File(dir, "language.txt").readText())

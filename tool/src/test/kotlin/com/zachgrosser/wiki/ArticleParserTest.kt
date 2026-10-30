@@ -28,7 +28,7 @@ private val LIGHT_PHONE_SECTION = """
 </ol></div></div>
 """.trimIndent()
 
-// A made-up page that exercises the less common cases.
+// Made up, to cover the odd cases.
 private val SYNTHETIC_PAGE = """
 <div class="mw-content-ltr mw-parser-output" lang="en" dir="ltr"><div class="shortdescription nomobile noexcerpt noprint searchaux" style="display:none">Small domesticated mammal</div>
 <!-- a comment with <p>markup</p> in it -->
@@ -203,8 +203,7 @@ class ArticleParserTest {
         val article = ArticleParser.parse("Köln", 1, 1, html, Language.German)
 
         assertEquals("de", article.language)
-        // Einzelnachweise had only a citation list, a navigation box and authority control, which
-        // go by their class, leaving nothing.
+        // Everything under Einzelnachweise goes by class, so the section ends up empty.
         assertEquals(listOf("Geschichte", "Literatur", "References"), article.sections.map { it.title })
         assertEquals(listOf("Rhein"), article.lead.single().spans.mapNotNull { it.target })
     }

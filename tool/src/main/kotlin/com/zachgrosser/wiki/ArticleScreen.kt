@@ -31,11 +31,9 @@ import kotlinx.coroutines.launch
 sealed interface ArticleState {
     data object Loading : ArticleState
     data class Loaded(val article: Article, val isSaved: Boolean) : ArticleState
-    /** [error] is an [ArticleNotFoundException] or a failed request. */
     data class Failed(val error: Throwable) : ArticleState
 }
 
-/** A short confirmation after saving or removing, shown under the title. */
 enum class SavedNotice { Saved, Removed }
 
 class ArticleViewModel(
@@ -53,7 +51,7 @@ class ArticleViewModel(
 
     init {
         viewModelScope.launch {
-            // Saved articles open straight from the phone, with or without a connection.
+            // Saved copies first, so they work offline.
             saved.find(requestedTitle, language.code)?.let { article ->
                 _state.value = ArticleState.Loaded(article, isSaved = true)
                 return@launch
@@ -92,7 +90,6 @@ class ArticleViewModel(
     }
 }
 
-/** An article's title, intro and list of sections, from [language]'s Wikipedia. */
 class ArticleScreen(
     sealedActivity: SealedLightActivity,
     private val title: String,
@@ -104,7 +101,6 @@ class ArticleScreen(
 
     override fun createViewModel() = ArticleViewModel(title, language, SavedArticles(lightContext.filesDir))
 
-    // Links lead to articles on the same Wikipedia.
     private fun openArticle(target: String) {
         navigateTo({ ArticleScreen(it, target, language) })
     }

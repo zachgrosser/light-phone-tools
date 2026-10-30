@@ -8,4 +8,4 @@ labels: enhancement
 
 **Why would it help?**
 
-Light asks tools to be intentional and calm: no feeds, nothing that pulls you back in. Ideas that keep Wiki that way are the easiest to take on.
+Light wants tools to be calm and intentional, with no feeds and nothing that pulls you back in. Ideas that fit that are the easiest to take on.

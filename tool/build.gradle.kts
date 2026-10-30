@@ -38,7 +38,7 @@ android {
     }
 
     buildFeatures {
-        // Wiki reads its version from BuildConfig (set by Light's plugin from lighttool.toml).
+        // For BuildConfig.VERSION_NAME
         buildConfig = true
     }
 
